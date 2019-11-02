@@ -1,0 +1,9 @@
+image: gcc
+
+build:
+  script:
+  - make
+  - ./sinusoid 1 1 1 0.1
+  - make sine.pts
+  - ./RoadInfo sine.pts
+  - ./CurveHistogram sine.pts
