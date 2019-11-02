@@ -47,9 +47,7 @@
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osg/MatrixTransform>
-#include <osgGA/TrackballManipulator>    
-#include <osg/ShapeDrawable>
-
+#include <osgGA/TrackballManipulator>
 
 #include "crgBaseLib.h"
 
@@ -70,39 +68,6 @@ void usage()
     exit( -1 );
 }
 
-/*
-osg::Node* createHeightField(std::string heightFile, std::string texFile) {
- 
-    osg::Image* heightMap = osgDB::readImageFile(heightFile);
- 
-    osg::HeightField* heightField = new osg::HeightField();
-    heightField->allocate(heightMap->s(), heightMap->t());
-    heightField->setOrigin(osg::Vec3(-heightMap->s() / 2, -heightMap->t() / 2, 0));
-    heightField->setXInterval(1.0f);
-    heightField->setYInterval(1.0f);
-    heightField->setSkirtHeight(1.0f);
- 
-    for (unsigned int r = 0; r < heightField->getNumRows(); r++) {
-        for (unsigned int c = 0; c < heightField->getNumColumns(); c++) {
-            heightField->setHeight(c, r, ((*heightMap->data(c, r)) / 255.0f) * 80.0f);
-        }
-    }
- 
-    osg::Geode* geode = new osg::Geode();
-    
-    //geode->addDrawable(new osg::ShapeDrawable(heightField));
-    geode->addDrawable(new osg::ShapeDrawable(heightField));
- 
-    osg::Texture2D* tex = new osg::Texture2D(osgDB::readImageFile(texFile));
-    tex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR_MIPMAP_LINEAR);
-    tex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
-    tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
-    tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
-    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
- 
-    return geode;
-}
-*/
 osg::ref_ptr<osg::Geode> crg2osg(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -232,7 +197,7 @@ osg::ref_ptr<osg::Geode> crg2osg(int dataSetId,
 }
 
 osg::ref_ptr<osg::Geode> crg2osg_all(int dataSetId, double delta) {
-
+    
     double uMin, uMax;
     double vMin, vMax;
     
@@ -312,16 +277,11 @@ int main( int argc, char** argv )
     crgDataSetModifiersApply( dataSetId );
     
     osg::ref_ptr<osg::Geode> rGeode = crg2osg_all(dataSetId, delta);
-
-    //osg::Node *hf = createHeightField("hm.png","grass.jpg");
-        
     if (rGeode!=NULL) {
 
         // Creating the root node
         osg::Group* SceneRoot = new osg::Group;
         SceneRoot->addChild( rGeode );
-        
-        //SceneRoot->addChild( hf );
         osgDB::writeNodeFile(*SceneRoot, "out.osg" );
         
         // Creating the viewer
