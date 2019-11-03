@@ -59,6 +59,7 @@ typedef struct {
     char    *fname;
     double  dimU;
     double  dimV;
+    osg::ref_ptr<osg::Texture2D> tex2D;
 } Texture;
     
 void usage()
@@ -103,7 +104,7 @@ osg::Node* createHeightField(std::string heightFile, std::string texFile) {
     return geode;
 }
 
-osg::ref_ptr<osg::Geode> crg2osg(int dataSetId, 
+osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
             double du, double dv,
@@ -212,7 +213,7 @@ osg::ref_ptr<osg::Geode> crg2osg(int dataSetId,
 	
     // Texture
     //osg::ref_ptr<osg::Image> rImage = new osg::Image;
-    //rImage = osgDB::readImageFile("../OpenCRG/Data/pino.png");
+   /*
     if ( tFile && tFile->fname ) {
         osg::ref_ptr<osg::Image> rImage(osgDB::readImageFile(tFile->fname));
         if ( rImage ) {
@@ -228,6 +229,12 @@ osg::ref_ptr<osg::Geode> crg2osg(int dataSetId,
             rState->setTextureAttributeAndModes(0, rTex, osg::StateAttribute::ON);
         }
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", tFile->fname);
+    }
+    */
+    if ( tFile && tFile->tex2D ) {
+            // Attach Texture to state of the geode
+            osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
+            rState->setTextureAttributeAndModes(0, tFile->tex2D, osg::StateAttribute::ON); 
     }
     return rGeode;
 }
@@ -245,7 +252,24 @@ osg::ref_ptr<osg::Geode> crg2osg_all(int dataSetId, double delta) {
     rTextFile.fname = strdup(DEFAULT_ROAD_TEXTURE_FNAME);
     rTextFile.dimU = 1.;
     rTextFile.dimV = 1.;
-    osg::ref_ptr<osg::Geode> res = crg2osg(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    rTextFile.tex2D = NULL;  // Not loaded yet
+    
+    if ( rTextFile.fname && *(rTextFile.fname) ) {
+        osg::ref_ptr<osg::Image> rImage(osgDB::readImageFile(rTextFile.fname));
+        if ( rImage ) {
+            // Bind image to 2D texture
+            osg::ref_ptr<osg::Texture2D> rTex = NULL;
+            rTex = new osg::Texture2D;
+            rTex->setImage(rImage);
+            rTex->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
+            rTex->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
+            rTextFile.tex2D = rTex;
+            printf("Texture file %s loaded\n", rTextFile.fname);
+        }
+        else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
+    }
+    
+    osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
