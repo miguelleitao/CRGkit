@@ -70,7 +70,7 @@ void usage()
     exit( -1 );
 }
 
-/*
+
 osg::Node* createHeightField(std::string heightFile, std::string texFile) {
  
     osg::Image* heightMap = osgDB::readImageFile(heightFile);
@@ -102,7 +102,7 @@ osg::Node* createHeightField(std::string heightFile, std::string texFile) {
  
     return geode;
 }
-*/
+
 osg::ref_ptr<osg::Geode> crg2osg(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -217,7 +217,8 @@ osg::ref_ptr<osg::Geode> crg2osg(int dataSetId,
         osg::ref_ptr<osg::Image> rImage(osgDB::readImageFile(tFile->fname));
         if ( rImage ) {
             // Bind image to 2D texture
-            osg::ref_ptr<osg::Texture2D> rTex(new osg::Texture2D);
+            osg::ref_ptr<osg::Texture2D> rTex = NULL;
+            rTex = new osg::Texture2D;
             rTex->setImage(rImage);
             rTex->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
             rTex->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
@@ -313,13 +314,19 @@ int main( int argc, char** argv )
     
     osg::ref_ptr<osg::Geode> rGeode = crg2osg_all(dataSetId, delta);
 
-    //osg::Node *hf = createHeightField("hm.png","grass.jpg");
+    osg::Node *hf = createHeightField("hm.png","grass.jpg");
         
     if (rGeode!=NULL) {
 
         // Creating the root node
         osg::Group* SceneRoot = new osg::Group;
-        SceneRoot->addChild( rGeode );
+        // SceneRoot->addChild( rGeode );
+
+        osg :: ref_ptr < osg :: LOD > lod = new osg :: LOD ;
+        lod->addChild(rGeode, 0.0f, FLT_MAX);
+        //lod->addChild(hf, 50.0f, FLT_MAX );
+
+        SceneRoot->addChild( lod );
         
         //SceneRoot->addChild( hf );
         osgDB::writeNodeFile(*SceneRoot, "out.osg" );
