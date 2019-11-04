@@ -104,6 +104,18 @@ osg::Node* createHeightField(std::string heightFile, std::string texFile) {
     return geode;
 }
 
+int getXYZ(int cpId, double u, double v, double *x, double *y, double *z) {
+    if ( !crgEvaluv2xy( cpId, u, v, x, y ) ) {
+                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to x/y.\n", u, v );
+                return 0;
+    }
+    if ( !crgEvaluv2z( cpId, u, v, z ) ) {
+                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to z.\n", u, v );
+                return 0;
+    }
+    return 1;
+}
+
 osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -148,50 +160,62 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     // Texture Verts
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array(2*(nStepsU+1)*(nStepsV+1));      
     
-    double u1=0, u2=0, v = 0.;
     double x, y, z;
     
-    //for ( i = -nBorderU; i <= nStepsU+nBorderU; i++ )
+    //for ( i = -nBorderU; i <= nStepsU+nBorderU ; i++ )
     
     int    i, j;
-    for( i=0 ; u2<=uMax ; i++ )
-    {
-        u1 = uMin + du * i;
-        u2 = uMin + du * (i+1);
-        
-        for( j=0 ; j<=nStepsV ; j++ ) {
-            v = vMin + dv * j;
+    if ( nStepsU<nStepsV ) {  // Set of Cross sections
+        printf("Set of Crossing section\n");
+        double u1=0, u2=0, v = 0.;
+        for( i=0 ; u2<uMax ; i++ )
+        {
+            u1 = uMin + du * i;
+            u2 = uMin + du * (i+1);
+            for( j=0 ; j<=nStepsV ; j++ ) {
+                v = vMin + dv * j;
+                
+                // Vertex ONE
+                if ( ! getXYZ( cpId, u1, v, &x, &y, &z) ) continue;
+                // if ( i==0 && j==0 ) z=0.1;   // Mark first vertex for debug purposes
+                int idx = 2*(i*(nStepsV+1)+j);
+                (*rVerts)[idx] = osg::Vec3(x, y, z);
+                (*rTexCoords)[idx] = osg::Vec2( u1/dimTexU, v/dimTexV );
             
-            // Vertex ONE
-            if ( !crgEvaluv2xy( cpId, u1, v, &x, &y ) ) {
-                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to x/y.\n", u1, v );
-                continue;
-            }
-            if ( !crgEvaluv2z( cpId, u1, v, &z ) ) {
-                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to z.\n", u1, v );
-                continue;
-            }
-            
-            // if ( i==0 && j==0 ) z=0.1;   // Mark first vertex for debug purposes
-            int idx = 2*(i*(nStepsV+1)+j);
-            (*rVerts)[idx] = osg::Vec3(x, y, z);
-            (*rTexCoords)[idx] = osg::Vec2( u1/dimTexU, v/dimTexV );
-        
-            // Vertex TWO
-            if ( !crgEvaluv2xy( cpId, u2, v, &x, &y ) ) {
-                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to x/y.\n", u2, v );
-                continue;
-            }
-            if ( !crgEvaluv2z( cpId, u2, v, &z ) ) {
-                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to z.\n", u2, v );
-                continue;
-            }
-            idx += 1;
-            (*rVerts)[idx] = osg::Vec3(x, y, z);
-            (*rTexCoords)[idx] = osg::Vec2(u2/dimTexU, v/dimTexV );
-        }         
-        rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, i*(nStepsV*2+2), nStepsV*2+2 ) );
+                // Vertex TWO
+                if ( ! getXYZ( cpId, u2, v, &x, &y, &z) ) continue;
+                idx += 1;
+                (*rVerts)[idx] = osg::Vec3(x, y, z);
+                (*rTexCoords)[idx] = osg::Vec2(u2/dimTexU, v/dimTexV );
+            } 
+            rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, i*(nStepsV*2+2), nStepsV*2+2 ) );
+        }
     }
+    else {      // Longitudinal sections
+        double v1=0, v2=0, u = 0.;
+        for( j=0 ; v2<vMax ; j++ )
+        {
+            v1 = vMin + dv * j;
+            v2 = vMin + dv * (j+1);
+            for( i=0 ; i<=nStepsU ; i++ ) {
+                u = uMin + du * i;
+                
+                // Vertex ONE
+                if ( ! getXYZ( cpId, u, v1, &x, &y, &z) ) continue;
+                int idx = 2*(j*(nStepsU+1)+i);
+                (*rVerts)[idx] = osg::Vec3(x, y, z);
+                (*rTexCoords)[idx] = osg::Vec2( u/dimTexU, v1/dimTexV );
+            
+                // Vertex TWO
+                if ( ! getXYZ( cpId, u, v2, &x, &y, &z) ) continue;
+                idx += 1;
+                (*rVerts)[idx] = osg::Vec3(x, y, z);
+                (*rTexCoords)[idx] = osg::Vec2( u/dimTexU, v2/dimTexV );
+            }
+            rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, j*(nStepsU*2+2), nStepsU*2+2 ) );
+        }
+    }
+        
     rQuad->setVertexArray(rVerts);
     rQuad->setTexCoordArray(0, rTexCoords);
 
@@ -239,7 +263,48 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     return rGeode;
 }
 
-osg::ref_ptr<osg::Geode> crg2osg_all(int dataSetId, double delta) {
+osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId, 
+            double uMin, double uMax,
+            double vMin, double vMax,
+            double du, double dv,
+            Texture *tFile = NULL)
+{    
+    const int    ScaleFactor = 8;
+    const double ViewDistanceFactor = 40.;
+    
+    if ( uMax-uMin<ScaleFactor*du/2. && vMax-vMin<ScaleFactor*dv ) {
+        return crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
+    }
+    
+    double stepU = ( uMax-uMin ) / (double(ScaleFactor));
+    double stepV = ( vMax-vMin ) / (double(ScaleFactor));
+    //stepV = 0.;
+    osg::ref_ptr<osg::Group> multiple = new osg::Group;
+    double lodDist = 0.;
+    if ( stepU>2*stepV ) {
+        // Divide segments into longitudinal sections
+        lodDist = stepU * ViewDistanceFactor;
+        for( int i=0 ; i<ScaleFactor ; i++ ) {
+            osg::ref_ptr<osg::Node> detailed = crg2osgLOD(dataSetId, uMin+i*stepU, uMin+(i+1)*stepU, vMin, vMax, du, dv, tFile);
+            multiple->addChild( detailed );
+        }
+    }
+    else {
+        // Divide segment into cross sections
+        lodDist = stepV * ViewDistanceFactor;
+        for( int i=0 ; i<ScaleFactor ; i++ ) {
+            osg::ref_ptr<osg::Node> detailed = crg2osgLOD(dataSetId, uMin, uMax, vMin+i*stepV, vMin+(i+1)*stepV, du, dv, tFile);
+            multiple->addChild( detailed );
+        }
+    }
+    osg::ref_ptr<osg::Geode> single = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
+    osg::ref_ptr<osg::LOD> rLOD = new osg::LOD;
+    rLOD->addChild(single, lodDist, FLT_MAX);
+    rLOD->addChild(multiple, 0.0f, lodDist );
+    return rLOD;
+}
+
+osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
 
     double uMin, uMax;
     double vMin, vMax;
@@ -269,7 +334,8 @@ osg::ref_ptr<osg::Geode> crg2osg_all(int dataSetId, double delta) {
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
     }
     
-    osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
@@ -278,7 +344,7 @@ int main( int argc, char** argv )
 {
     char*  filename = NULL;
     int    dataSetId = 0;
-    double delta = 0.5;
+    double delta = 0.1;
     
     /* --- decode the command line --- */
     if ( argc < 2 )
@@ -336,7 +402,7 @@ int main( int argc, char** argv )
     crgDataSetModifiersPrint( dataSetId );
     crgDataSetModifiersApply( dataSetId );
     
-    osg::ref_ptr<osg::Geode> rGeode = crg2osg_all(dataSetId, delta);
+    osg::ref_ptr<osg::Node> rGeode = crg2osg_all(dataSetId, delta);
 
     osg::Node *hf = createHeightField("hm.png","grass.jpg");
         
