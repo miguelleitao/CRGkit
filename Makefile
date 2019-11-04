@@ -23,7 +23,15 @@ LINMATH_INC=-I .
 
 CFLAGS=-Wall -O2
 
-all: ${PROGS}
+all: OpenCRG ${PROGS}
+
+OpenCRG/makefile:
+	git submodule update --init --recursive
+
+OpenCRG: OpenCRG/lib
+
+OpenCRG/lib: OpenCRG/makefile
+	make -C $@
 
 crg2pts.o: crg2pts.c 
 	gcc -c -Wall crg2pts.c -I OpenCRG/inc
