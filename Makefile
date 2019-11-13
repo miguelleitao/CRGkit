@@ -28,25 +28,25 @@ all: OpenCRG ${PROGS}
 OpenCRG/makefile:
 	git submodule update --init --recursive
 
-OpenCRG: OpenCRG/lib
+OpenCRG: OpenCRG/baselib/lib
 
-OpenCRG/lib: OpenCRG/makefile
-	make -C $@
+OpenCRG/baselib/lib: OpenCRG/makefile
+	make -C OpenCRG/baselib
 
 crg2pts.o: crg2pts.c 
-	gcc -c -Wall crg2pts.c -I OpenCRG/inc
+	gcc -c -Wall crg2pts.c -I OpenCRG/baselib/inc
 
-crg2pts: crg2pts.o OpenCRG/lib/libOpenCRG.a
+crg2pts: crg2pts.o OpenCRG/baselib/lib/libOpenCRG.a
 	gcc -o $@ $^ -lm
 
 crg2obj.o: crg2obj.c
-	gcc -c -Wall crg2obj.c -I OpenCRG/inc
+	gcc -c -Wall crg2obj.c -I OpenCRG/baselib/inc
 
-crg2obj: crg2obj.o OpenCRG/lib/libOpenCRG.a
+crg2obj: crg2obj.o OpenCRG/baselib/lib/libOpenCRG.a
 	gcc -o $@ $^ -lm
 
 crg2osg.o: crg2osg.C
-	g++ -c -Wall -I OpenCRG/inc $<
+	g++ -c -Wall -I OpenCRG/baselib/inc $<
 
 crg2osg: crg2osg.o
 	g++ -o $@ $^ -l osg -l osgViewer -l osgGA -l osgDB -L OpenCRG/lib -l OpenCRG
@@ -77,6 +77,10 @@ push:
 	git add ${FILES}
 	git commit -m "auto update"
 	git push
+
+pull:
+	git submodule update --recursive --remote
+	git pull
 
 .PHONY: install
 install: ${PROGS} 
