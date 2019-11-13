@@ -27,6 +27,49 @@
 #include <math.h>
 #include "crgBaseLib.h"
 
+typedef struct {
+    int coords;
+    int verts;
+    int capacity;
+    double data[];
+} ptsData;
+
+char *trim(char *s) {
+    if ( !s ) return s;
+    while( *s==' ' ) s++;
+    return s;
+}
+
+ptsData *newPts(int nCols) {
+    ptsData *p = malloc(sizeof(ptsData));
+    p->coords = nCols;
+    p->verts = 0;
+    p->capacity = 0;
+    p->data = NULL;
+    return p;
+}
+
+ptsData *loadPtsFile(char *fname, int nCols) {
+    Scalar *data;
+    
+    FILE *fin = fopen(fname, "r");
+    if ( fin ) {
+        char line[MAX_LINE_LEN+1];
+        while( fgets(line, MAX_LINE_LEN, fin) ) {
+            if ( line[0]=='#' ) continue;
+            char *lp = trim(line);
+            for( int c=0 ; c<nCols && lp ; c++ ) {
+                *p = strtod(lp, &nextp);
+                lp = trim(nextp);
+            }
+            //double x, y, z, h;
+            int res = sscanf(line,"%lf %lf %lf %lf", p+0, p+1, p+2, p+3);
+            
+        }
+    }
+}
+
+
 void usage()
 {
     fprintf(stderr, "Usage: pts2cgr [options] <filename>\n" );
@@ -110,16 +153,7 @@ int main( int argc, char** argv )
     }
     
     /* --- now load the input file --- */
-    FILE *fin = fopen(filename, "r");
-    if ( fin ) {
-        char line[MAX_LINE_LEN+1];
-        while( fgets(line, MAX_LINE_LEN, fin) ) {
-            if ( line[0]=='#' ) continue;
-            douyble x, y, z, h;
-            int res = sscanf(line,"%lf %lf %lf %lf", &x, &y, &z, &h);
-            
-        }
-    }
+
         
     
     /* --- now test the position conversion --- */
