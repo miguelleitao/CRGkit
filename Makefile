@@ -1,4 +1,5 @@
 
+
 # Makefile for CRGkit
 
 VERSION=`cat version`
@@ -49,7 +50,7 @@ crg2osg.o: crg2osg.C
 	g++ -c -Wall -I OpenCRG/baselib/inc $<
 
 crg2osg: crg2osg.o
-	g++ -o $@ $^ -l osg -l osgViewer -l osgGA -l osgDB -L OpenCRG/lib -l OpenCRG
+	g++ -o $@ $^ -l osg -l osgViewer -l osgGA -l osgDB -L OpenCRG/baselib/lib -l OpenCRG
 
 OpenCRG/lib/libOpenCRG.a:
 	make -C OpenCRG
