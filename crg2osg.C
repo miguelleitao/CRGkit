@@ -156,7 +156,6 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     osg::ref_ptr<osg::Geometry> rQuad = new osg::Geometry;
     // Verts
     osg::ref_ptr<osg::Vec3Array> rVerts = new osg::Vec3Array( 2*(nStepsU+1)*(nStepsV+1) );
-
     // Texture Verts
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array(2*(nStepsU+1)*(nStepsV+1));      
     

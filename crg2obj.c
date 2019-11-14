@@ -184,6 +184,6 @@ int main( int argc, char** argv )
     
     crgMsgPrint( dCrgMsgLevelNotice, "main: normal termination\n" );
     
-    return 1;
+    return 0;
 }
 
