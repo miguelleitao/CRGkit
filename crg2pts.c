@@ -122,15 +122,21 @@ int main( int argc, char** argv )
     crgDataSetGetURange( dataSetId, &uMin, &uMax );
     crgDataSetGetVRange( dataSetId, &vMin, &vMax );
     
+    
+    
     /* --- now test the position conversion --- */
     //du = ( uMax - uMin ) / nStepsU;
     du = 1.; 
     dv = ( vMax - vMin ) / nStepsV;
     
     u = uMin;
+    
+    // double phiStart = 
      
     //for ( i = -nBorderU; i <= nStepsU+nBorderU; i++ )
-    for( i=0 ; u<=uMax ; i++ )
+    
+    double lastX=0, lastY=0;
+    for( i=0 ; u<uMax ; i++ )
     {
         u = uMin + du * i;
         j = 0;
@@ -152,9 +158,14 @@ int main( int argc, char** argv )
             double uMem = u;
             double vMem = v;
             
+            if ( i>0 ) 
+                phi = atan2( y-lastY, x-lastX );
+            
             printf("%+10.4f %+10.4f %+10.4f %+10.4f %+10.4f %+10.4f\n",
                     x, y, z,        phi, 0., 0.);
             
+            lastX = x;
+            lastY = y;
             /* --- now all the way back and check the result --- */
             /*
             if ( !crgEvalxy2uv( cpId, x, y, &u, &v ) )

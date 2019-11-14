@@ -114,8 +114,10 @@ int saveCrgRoadSection(ptsData *pts, FILE *fout) {
     fprintf(fout, "$ROAD_CRG                                          ! crg road parameters\n");
     fprintf(fout, "REFERENCE_LINE_START_U   = 0.0\n");
     fprintf(fout, "REFERENCE_LINE_START_X   = %.4lf\n", pts->data[0]);
+    printf("PHI: %lf\n",pts->data[3]);
     fprintf(fout, "REFERENCE_LINE_START_Y   = %.4lf\n", pts->data[1]);
-    fprintf(fout, "REFERENCE_LINE_START_PHI = %.4lf\n", pts->data[4]);
+    fprintf(fout, "REFERENCE_LINE_START_PHI = %.4lf\n", pts->data[3]);
+    
     fprintf(fout, "REFERENCE_LINE_END_U     = %.4lf\n", 22.0);
     fprintf(fout, "REFERENCE_LINE_END_PHI   = %.4lf\n", 0.);
     fprintf(fout, "REFERENCE_LINE_INCREMENT = 1.0\n");
@@ -151,12 +153,11 @@ void printCrgValue(FILE *fout, Scalar v) {
 int saveCrgDataSection(ptsData *pts, FILE *fout) {
     fprintf(fout, "$$$$$$$$10$$$$$$$$20$$$$$$$$30$$$$$$$$40$$$$$$$$50$$$$$$$$60$$$$$$$$70$$$$$$$$80\n");
     for( int i=1 ; i<pts->verts ; i++ ) {
-        for( int s=0 ; s<7 ; s++ ) {
-            char format[] = " %.7lf";
-            double v = pts->data[i*pts->coords+2];
-            int signal = ( v>=0 ? 0 : 1 );
-            fprintf(fout, format+signal, v);
-        }
+        double v = pts->data[i*pts->coords+3];      // heading
+        printCrgValue(fout, v);
+        v = pts->data[i*pts->coords+2];             // Z
+        for( int s=0 ; s<7 ; s++ ) 
+            printCrgValue(fout, v);
         fprintf(fout,"\n");
     }
     return 0;
