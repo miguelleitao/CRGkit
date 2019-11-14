@@ -42,10 +42,7 @@ int main( int argc, char** argv )
     int    dataSetId = 0;
     int    i;
     int    j;
-    int    nStepsU = 20;
     int    nStepsV = 20;
-    int    nBorderU = 10;
-    int    nBorderV = 10;
     int    cpId;
     double du, dv;
     double uMin, uMax;
@@ -155,8 +152,6 @@ int main( int argc, char** argv )
                 crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to phi/kappa.\n", u, v );  
                 continue;
             }
-            double uMem = u;
-            double vMem = v;
             
             if ( i>0 ) 
                 phi = atan2( y-lastY, x-lastX );
