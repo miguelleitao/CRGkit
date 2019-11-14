@@ -334,8 +334,8 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
     }
     
-    //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
-    osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+    osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
@@ -403,8 +403,11 @@ int main( int argc, char** argv )
     crgDataSetModifiersApply( dataSetId );
     
     osg::ref_ptr<osg::Node> rGeode = crg2osg_all(dataSetId, delta);
-
-    osg::Node *hf = createHeightField("hm.png","grass.jpg");
+  
+    
+//printf("criando hf\n");
+    //osg::Node *hf = createHeightField("hm.png","grass.jpg");
+//printf("criou hf\n");
         
     if (rGeode!=NULL) {
 
@@ -412,7 +415,7 @@ int main( int argc, char** argv )
         osg::Group* SceneRoot = new osg::Group;
         // SceneRoot->addChild( rGeode );
 
-        osg :: ref_ptr < osg :: LOD > lod = new osg :: LOD ;
+        osg :: ref_ptr<osg::LOD> lod = new osg::LOD ;
         lod->addChild(rGeode, 0.0f, FLT_MAX);
         //lod->addChild(hf, 50.0f, FLT_MAX );
 

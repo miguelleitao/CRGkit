@@ -15,7 +15,7 @@ SRCFILES:=*.c *.C
 SCRIPTS:=
 
 # Programmes
-PROGS:=crg2pts crg2obj crg2osg
+PROGS:=crg2pts crg2obj crg2osg pts2crg
 
 # Files to store in archive
 FILES:=${SRCFILES} Makefile ${SCRIPTS} version README* .gitignore .gitlab-ci.yml
@@ -39,7 +39,7 @@ crg2pts.o: crg2pts.c
 
 crg2pts: crg2pts.o OpenCRG/baselib/lib/libOpenCRG.a
 	gcc -o $@ $^ -lm
-
+	
 crg2obj.o: crg2obj.c
 	gcc -c -Wall crg2obj.c -I OpenCRG/baselib/inc
 
@@ -57,7 +57,7 @@ OpenCRG/lib/libOpenCRG.a:
 
 .PHONY:clean
 clean:
-	rm ${PROGS} version.h
+	-rm -f ${PROGS} *.o version.h
 
 inc_version: version
 	@perl -pe 's/^((\d+\.)*)(\d+)(.*)$$/$$1.($$3+1).$$4/e' < $< >$<.new 
