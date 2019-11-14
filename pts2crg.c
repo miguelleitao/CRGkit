@@ -120,7 +120,7 @@ int saveCrgRoadSection(ptsData *pts, FILE *fout) {
     
     fprintf(fout, "REFERENCE_LINE_END_U     = %.4lf\n", 22.0);
     fprintf(fout, "REFERENCE_LINE_END_PHI   = %.4lf\n", -pts->data[pts->verts*pts->coords+3]);
-    fprintf(fout, "REFERENCE_LINE_INCREMENT = 1.4\n");
+    fprintf(fout, "REFERENCE_LINE_INCREMENT = 1.0\n");
     fprintf(fout, "LONG_SECTION_V_RIGHT     =-1.50         ! with explicit definition below\n");
     fprintf(fout, "LONG_SECTION_V_LEFT      = 1.50         ! with explicit definition below\n");
     fprintf(fout, "$!**********************************************************************\n");
