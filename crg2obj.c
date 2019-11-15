@@ -44,8 +44,6 @@ int main( int argc, char** argv )
     int    j;
     int    nStepsU;
     int    nStepsV;
-    int    nBorderU = 10;
-    int    nBorderV = 10;
     int    cpId;
     double du, dv;
     double delta = 0.2;
@@ -154,8 +152,6 @@ int main( int argc, char** argv )
                 crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to phi/kappa.\n", u, v );  
                 continue;
             }
-            double uMem = u;
-            double vMem = v;
             
             printf("v %.4f %.4f %.4f \n", x, y, z);
             
