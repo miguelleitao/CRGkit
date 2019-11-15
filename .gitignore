@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+crg2obj
+crg2osg
+crg2pts
+pts2crg
