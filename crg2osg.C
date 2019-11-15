@@ -66,7 +66,9 @@ void usage()
 {
     crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2pts [options] <filename>\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "       options: -d delta      define maximum sampling distance\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -d delta      define maximum sampling distance\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -o outfile    output filename.osg\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -p speed      follow path using velocity speed im m/s\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       <filename>:            input .crg file\n" );
     exit( -1 );
 }
@@ -342,8 +344,10 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
 int main( int argc, char** argv ) 
 {
     char*  filename = NULL;
+    char*  outfilename = NULL;
     int    dataSetId = 0;
     double delta = 0.1;
+    double speed = -1.0;
     
     /* --- decode the command line --- */
     if ( argc < 2 )
@@ -359,16 +363,40 @@ int main( int argc, char** argv )
         
         if ( !strcmp( *argv, "-h" ) ) {
             usage();
-            continue;
+            return 1;
         }
         if ( ! strcmp( *argv, "-d" ) ) {
             argv++;
             argc--;
             if ( argc ) {
                 delta = atof(*argv);
+                continue;
             }
-            continue;
+            fprintf(stderr,"Missing debug level\n");
+            return 1;
         }
+        if ( ! strcmp( *argv, "-o" ) ) {
+            argv++;
+            argc--;
+            if ( argc ) {
+                outfilename = *argv;
+                continue;
+            }
+            fprintf(stderr,"Missing output filename\n");
+            return 1;
+        }
+        if ( ! strcmp( *argv, "-p" ) ) {
+            argv++;
+            argc--;
+            if ( argc ) {
+                speed = atof(*argv);
+                continue;
+            }
+            fprintf(stderr,"Missing velocity\n");
+            return 1;
+        }
+        fprintf(stderr,"Bad option: '%s'\n", *argv);
+        return 1;
     }
     
     if ( !argc )    /* last argument is the filename */
@@ -421,21 +449,43 @@ int main( int argc, char** argv )
         SceneRoot->addChild( lod );
         
         //SceneRoot->addChild( hf );
-        osgDB::writeNodeFile(*SceneRoot, "out.osg" );
-        
-        // Creating the viewer
-        osgViewer::Viewer viewer ;
-        viewer.setSceneData( SceneRoot );
-        
-        // Setup camera
-        osg::Matrix matrix;
-        matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
-        viewer.getCamera()->setViewMatrix(matrix);
-
-        viewer.setCameraManipulator(  new osgGA::TrackballManipulator() );
-
-        while( !viewer.done() ) {
-            viewer.frame();
+        if ( outfilename ) {
+            osgDB::writeNodeFile(*SceneRoot, outfilename );
+        }
+        else {
+            // Creating the viewer
+            osgViewer::Viewer viewer ;
+            viewer.setSceneData( SceneRoot );
+            
+            // Setup camera
+            osg::Matrix matrix;
+            osg::Camera *viewCam = viewer.getCamera();
+            int cpId = -1;
+            double uCam = 0.;
+            if ( speed<0. ) {
+                matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
+                //viewer.getCamera()->setViewMatrix(matrix);
+                viewCam->setViewMatrix(matrix);
+                viewer.setCameraManipulator(  new osgGA::TrackballManipulator() );
+            }
+            else {
+                /* --- create a contact point --- */
+                cpId = crgContactPointCreate( dataSetId );
+                if ( cpId < 0 ) 
+                    crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
+            }
+            while( !viewer.done() ) {
+                double x, y, z;
+                getXYZ(cpId, uCam, 0., &x, &y, &z);
+                double xC, yC, zC;
+                getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
+                matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
+                viewer.getCamera()->setViewMatrix(matrix);
+                
+                viewer.frame();
+                uCam += 0.1;
+                
+            }
         }
     }
     else {
