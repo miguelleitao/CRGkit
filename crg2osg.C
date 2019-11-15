@@ -461,7 +461,6 @@ int main( int argc, char** argv )
             osg::Matrix matrix;
             osg::Camera *viewCam = viewer.getCamera();
             int cpId = -1;
-            double uCam = 0.;
             if ( speed<0. ) {
                 matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
                 //viewer.getCamera()->setViewMatrix(matrix);
@@ -474,6 +473,10 @@ int main( int argc, char** argv )
                 if ( cpId < 0 ) 
                     crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
             }
+            /* --- get extents of data set --- */
+            double uMin, uMax;
+            crgDataSetGetURange( dataSetId, &uMin, &uMax );
+            double uCam = uMin - speed;  // Start before the beginning
             while( !viewer.done() ) {
                 double x, y, z;
                 getXYZ(cpId, uCam, 0., &x, &y, &z);
@@ -483,8 +486,8 @@ int main( int argc, char** argv )
                 viewer.getCamera()->setViewMatrix(matrix);
                 
                 viewer.frame();
-                uCam += 0.1;
-                
+                uCam += 0.1*speed;
+                if ( uCam>uMax ) uCam = uMin-speed;
             }
         }
     }
