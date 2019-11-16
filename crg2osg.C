@@ -273,7 +273,7 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     const int    ScaleFactor = 8;
     const double ViewDistanceFactor = 40.;
     
-    if ( uMax-uMin<ScaleFactor*du/2. && vMax-vMin<ScaleFactor*dv ) {
+    if ( uMax-uMin<ScaleFactor*du/2. /*&& vMax-vMin<ScaleFactor*dv*/ ) {
         return crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
     }
     
@@ -282,7 +282,7 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     //stepV = 0.;
     osg::ref_ptr<osg::Group> multiple = new osg::Group;
     double lodDist = 0.;
-    if ( stepU>2*stepV ) {
+    if ( 1||stepU>2*stepV ) {
         // Divide segments into longitudinal sections
         lodDist = stepU * ViewDistanceFactor;
         for( int i=0 ; i<ScaleFactor ; i++ ) {
@@ -298,6 +298,7 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
             multiple->addChild( detailed );
         }
     }
+    // Single poligon
     osg::ref_ptr<osg::Geode> single = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
     osg::ref_ptr<osg::LOD> rLOD = new osg::LOD;
     rLOD->addChild(single, lodDist, FLT_MAX);
@@ -335,8 +336,8 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
     }
     
-    osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
-    //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+    //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
@@ -433,7 +434,7 @@ int main( int argc, char** argv )
   
     
 //printf("criando hf\n");
-    //osg::Node *hf = createHeightField("hm.png","grass.jpg");
+   // osg::Node *hf = createHeightField("hm.png","grass.jpg");
 //printf("criou hf\n");
         
     if (rGeode!=NULL) {
@@ -444,7 +445,7 @@ int main( int argc, char** argv )
 
         osg :: ref_ptr<osg::LOD> lod = new osg::LOD ;
         lod->addChild(rGeode, 0.0f, FLT_MAX);
-        //lod->addChild(hf, 50.0f, FLT_MAX );
+     //   lod->addChild(hf, 50.0f, FLT_MAX );
 
         SceneRoot->addChild( lod );
         
