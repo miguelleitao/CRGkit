@@ -125,6 +125,115 @@ int getXYZ(int cpId, double u, double v, double *x, double *y, double *z) {
     }
     return 1;
 }
+/*! Create a transition geode composed of triangular meshes.
+ */
+osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId, 
+            double uMin, double uMax,
+            double vMin, double vMax,
+            double du, double dv,
+            Texture *tFile = NULL)
+{    
+    /* --- create a contact point --- */
+    int cpId = crgContactPointCreate( dataSetId );
+    if ( cpId < 0 ) {
+        crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
+        return NULL;
+    }
+    
+    int    nStepsU, nStepsV;
+    double dimTexU = 1.;
+    double dimTexV = 1.;
+    if ( tFile ) {
+        dimTexU = tFile->dimU;
+        dimTexV = tFile->dimV;
+    }
+
+    /* --- now set the sampling parameters --- */   
+    nStepsV = 1 + (vMax-vMin - (1e-15)) / dv;
+    dv = ( vMax - vMin ) / nStepsV;
+    
+    nStepsU = log(nStepsV-1)/log(2.);
+    du = ( uMax - uMin ) / nStepsU;
+    
+    /*
+    crgMsgPrint( dCrgMsgLevelNotice, "\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "crg2osg: Sampling information:\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "    delta u [m]:  %.4f\n", du );
+    crgMsgPrint( dCrgMsgLevelNotice, "    delta v [m]:  %.4f\n", dv );
+    crgMsgPrint( dCrgMsgLevelNotice, "    samples u  :  %ld\n", nStepsU );
+    crgMsgPrint( dCrgMsgLevelNotice, "    samples v  :  %ld\n", nStepsV );
+    crgMsgPrint( dCrgMsgLevelNotice, "\n" );    
+    */
+    // Init Triangular mesh
+    osg::ref_ptr<osg::Geometry> rTri = new osg::Geometry;
+    // Verts
+    int nVerts = 2*nStepsU+3*(int)pow(2,nStepsU)-3;
+    printf("StepsU: %d, nVerts: %d\n", nStepsU, nVerts);
+    osg::ref_ptr<osg::Vec3Array> rVerts = new osg::Vec3Array( nVerts );
+    // Texture Verts
+    osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array( nVerts );      
+    
+    double x, y, z;
+    
+    int    i, j;
+ 
+    // printf("Set of Crossing sections\n");
+    double u1, u2, v = 0.;
+    int idx = 0;
+    for( i=0 ; i<nStepsU ; i++ )
+    {
+        u1 = uMin + du * i;
+        u2 = uMin + du * (i+1);
+        double dv1 = (vMax-vMin) / (double)(i+1);
+        double dv2 = (vMax-vMin) / (double)(i+2);
+        int idxFirst = idx;
+        for( j=0 ; j<=i+1 ; j++ ) {
+            
+            // Vertex ONE
+            v = vMin + dv2 * j;
+            if ( ! getXYZ( cpId, u2, v, &x, &y, &z) ) continue;
+            // if ( i==0 && j==0 ) z=0.1;   // Mark first vertex for debug purposes
+            (*rVerts)[idx] = osg::Vec3(x, y, z);
+            (*rTexCoords)[idx] = osg::Vec2(u2/dimTexU, v/dimTexV + centerTextureV );
+            idx += 1;
+        
+            // Vertex TWO
+            v = vMin + dv1 * j;
+            if ( ! getXYZ( cpId, u1, v, &x, &y, &z) ) continue;
+            (*rVerts)[idx] = osg::Vec3(x, y, z);
+            (*rTexCoords)[idx] = osg::Vec2(u1/dimTexU, v/dimTexV + centerTextureV );
+            idx += 1;
+        } 
+        printf("adding %d %d\n", idxFirst, idx);
+        rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, idxFirst, idx-idxFirst ));
+    }
+    
+    rTri->setVertexArray(rVerts);
+    rTri->setTexCoordArray(0, rTexCoords);
+
+    // Color
+    osg::ref_ptr<osg::Vec4Array> rColor = new osg::Vec4Array;
+    rColor->push_back( osg::Vec4(1., 1., 1., 1.) );
+    rTri->setColorArray(rColor);
+	rTri->setColorBinding(osg::Geometry::BIND_OVERALL);
+    
+    // Normal
+    osg::ref_ptr<osg::Vec3Array> rNormal = new osg::Vec3Array;
+	rNormal->push_back( osg::Vec3(0., 0., 1.));
+	rTri->setNormalArray ( rNormal );
+	rTri->setNormalBinding( osg::Geometry::BIND_OVERALL );
+        
+	osg::ref_ptr<osg::Geode> rGeode = new osg::Geode();
+	rGeode->setName("crgRoadTriStrip");
+	rGeode->addDrawable(rTri);
+	
+    if ( tFile && tFile->tex2D ) {
+            // Attach Texture to state of the geode
+            osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
+            rState->setTextureAttributeAndModes(0, tFile->tex2D, osg::StateAttribute::ON); 
+    }
+    return rGeode;
+}
 
 osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId, 
             double uMin, double uMax,
@@ -162,7 +271,7 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     crgMsgPrint( dCrgMsgLevelNotice, "    samples v  :  %ld\n", nStepsV );
     crgMsgPrint( dCrgMsgLevelNotice, "\n" );    
     */
-    // Init Ground
+    // Init Quad mesh
     osg::ref_ptr<osg::Geometry> rQuad = new osg::Geometry;
     // Verts
     osg::ref_ptr<osg::Vec3Array> rVerts = new osg::Vec3Array( 2*(nStepsU+1)*(nStepsV+1) );
@@ -170,8 +279,6 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array(2*(nStepsU+1)*(nStepsV+1));      
     
     double x, y, z;
-    
-    //for ( i = -nBorderU; i <= nStepsU+nBorderU ; i++ )
     
     int    i, j;
     if ( 0 && nStepsU<nStepsV ) {  // Set of Cross sections
@@ -182,7 +289,7 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
             u1 = uMin + du * i;
             u2 = uMin + du * (i+1);
             for( j=0 ; j<=nStepsV ; j++ ) {
-//                 v = vMin + dv * j;
+                 v = vMin + dv * j;
                 
                 // Vertex ONE
                 if ( ! getXYZ( cpId, u1, v, &x, &y, &z) ) continue;
@@ -285,13 +392,15 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     osg::ref_ptr<osg::LOD> rLLOD = new osg::LOD;
     osg::ref_ptr<osg::Geode> geo;
     
+    // Full Detail
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
     rLLOD->addChild(geo, 0., lodDist/2.);
         
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du*2, dv*2, tFile);
+    //geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
     rLLOD->addChild(geo, lodDist/2., lodDist);
     
-    
+    // Single Poligon
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
     rLLOD->addChild(geo, lodDist, FLT_MAX);
     
@@ -304,6 +413,7 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
             double du, double dv,
             Texture *tFile = NULL)
 {       
+    //if ( uMax-uMin<ScaleFactor*ScaleFactor*ScaleFactor*du || vMax-vMin<ScaleFactor*dv ) {
     if ( uMax-uMin<ScaleFactor*du || vMax-vMin<ScaleFactor*dv ) {
         // Finest detailed version
 //        return crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
@@ -315,7 +425,7 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     //stepV = 0.;
     osg::ref_ptr<osg::Group> multiple = new osg::Group;
     double lodDist = 0.;
-    if ( stepU>2*stepV ) {
+    if ( 1 || stepU>2*stepV ) {
         // Divide segments into longitudinal sections
         lodDist = stepU * ViewDistanceFactor;
         for( int i=0 ; i<ScaleFactor ; i++ ) {
