@@ -18,7 +18,7 @@ SCRIPTS:=
 PROGS:=crg2pts crg2obj crg2osg pts2crg
 
 # Files to store in archive
-FILES:=${SRCFILES} Makefile ${SCRIPTS} version README* .gitignore .gitlab-ci.yml
+FILES:=${SRCFILES} Makefile ${SCRIPTS} version README* .gitignore .gitlab-ci.yml configure
 
 LINMATH_INC=-I .
 

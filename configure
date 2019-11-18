@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Configuring crg2osg"
+echo "# crg2osg local configuration" >.config
