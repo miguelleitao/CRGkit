@@ -24,6 +24,9 @@ LINMATH_INC=-I .
 
 CFLAGS=-Wall -O2
 
+# machine dependent configurations are kept on local .config file
+-include .config
+
 all: OpenCRG ${PROGS}
 
 OpenCRG/makefile:

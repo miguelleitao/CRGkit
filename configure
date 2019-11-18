@@ -1,3 +1,4 @@
 #!/bin/sh
 echo "Configuring crg2osg"
 echo "# crg2osg local configuration" >.config
+echo "local: pts2crg" >>.config
