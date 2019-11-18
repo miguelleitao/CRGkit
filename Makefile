@@ -86,6 +86,10 @@ pull:
 	git submodule update --recursive --remote
 	git pull
 
+check:  local
+
+distcheck: check
+
 .PHONY: install
 install: ${PROGS} 
 	mkdir -p ${INSTALL_PATH}/bin
