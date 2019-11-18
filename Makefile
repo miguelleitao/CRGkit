@@ -86,7 +86,7 @@ pull:
 	git submodule update --recursive --remote
 	git pull
 
-check:  local
+check: Makefile
 
 distcheck: check
 
