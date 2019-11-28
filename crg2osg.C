@@ -76,7 +76,7 @@ typedef struct {
     
 void usage()
 {
-    crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2pts [options] <filename>\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2osg [options] <filename>\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -d delta      define maximum sampling distance\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -l            use osg::LOD\n" );
