@@ -506,8 +506,8 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     osg::HeightField* heightField = new osg::HeightField();
     heightField->allocate(nStepsU, nStepsV);
     heightField->setOrigin(osg::Vec3(-nStepsU / 2, -nStepsV / 2, 0));
-    heightField->setXInterval(dv);
-    heightField->setYInterval(du);
+    heightField->setXInterval(du);
+    heightField->setYInterval(dv);
     heightField->setSkirtHeight(1.0f);
  
         /* --- create a contact point --- */
@@ -521,7 +521,9 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     for (unsigned int u = 0; u < nStepsU ; u++) {
         for (unsigned int v = 0; v < nStepsV ; v++) {
             if ( ! getXYZ( cpId, u*du+uMin, v*dv+vMin, &x, &y, &z) ) continue;
+            z = 0.;
             heightField->setHeight(u, v, z);
+            //printf("definiu %u %u %f\n", u,v,z);
         }
     }
  
