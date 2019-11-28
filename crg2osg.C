@@ -63,9 +63,9 @@
 
 const int    ScaleFactor = 8;
 const double ViewDistanceFactor = 25.;
- int    useLOD = 0;
- int    usePagedLOD = 0;
- int    useHeightMap = 0;
+int   useLOD = 0;
+int   usePagedLOD = 0;
+int   useHeightMap = 0;
     
 typedef struct {
     char    *fname;
@@ -505,10 +505,11 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     
     osg::HeightField* heightField = new osg::HeightField();
     heightField->allocate(nStepsU, nStepsV);
-    heightField->setOrigin(osg::Vec3(-nStepsU / 2, -nStepsV / 2, 0));
+    //heightField->setOrigin(osg::Vec3(-(double)nStepsU / 2., -(double)nStepsV / 2., 0.));
+    heightField->setOrigin(osg::Vec3(0., 0., 0.));
     heightField->setXInterval(du);
     heightField->setYInterval(dv);
-    heightField->setSkirtHeight(1.0f);
+    heightField->setSkirtHeight(0.1f);
  
         /* --- create a contact point --- */
     int cpId = crgContactPointCreate( dataSetId );
@@ -521,7 +522,7 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     for (unsigned int u = 0; u < nStepsU ; u++) {
         for (unsigned int v = 0; v < nStepsV ; v++) {
             if ( ! getXYZ( cpId, u*du+uMin, v*dv+vMin, &x, &y, &z) ) continue;
-            z = 0.;
+            //z = 0.;
             heightField->setHeight(u, v, z);
             //printf("definiu %u %u %f\n", u,v,z);
         }
@@ -574,12 +575,12 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
     
     osg::ref_ptr<osg::Node> res;
     if ( useLOD || usePagedLOD ) {
-        res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+        res = crg2osgLOD(dataSetId, uMin, uMax, vMin, vMax, delta*2, delta, &rTextFile);
     }
     else if ( useHeightMap ) {
-        res = crg2osgHeightMap(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, rTextFile.fname);
+        res = crg2osgHeightMap(dataSetId, uMin, uMax, vMin, vMax, delta, delta, rTextFile.fname);
     }
-    else res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+    else res = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, delta, delta, &rTextFile);
         
     //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
     //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
@@ -691,7 +692,7 @@ int main( int argc, char** argv )
   
     
 //printf("criando hf\n");
-   // osg::Node *hf = createHeightField("hm.png","grass.jpg");
+//osg::Node *hf = createHeightField("hm.png","grass.jpg");
 //printf("criou hf\n");
         
     if (rGeode!=NULL) {
@@ -706,9 +707,9 @@ int main( int argc, char** argv )
 
         SceneRoot->addChild( lod );
         
-        //SceneRoot->addChild( hf );
+  //      SceneRoot->addChild( hf );
         if ( outfilename ) {
-            osgDB::writeNodeFile(*SceneRoot, outfilename );
+            osgDB::writeNodeFile(*rGeode, outfilename );
         }
         else {
             // Creating the viewer
