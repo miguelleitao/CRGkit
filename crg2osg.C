@@ -63,6 +63,9 @@
 
 const int    ScaleFactor = 8;
 const double ViewDistanceFactor = 25.;
+ int    useLOD = 0;
+ int    usePagedLOD = 0;
+ int    useHeightMap = 0;
     
 typedef struct {
     char    *fname;
@@ -76,8 +79,11 @@ void usage()
     crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2pts [options] <filename>\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -d delta      define maximum sampling distance\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -l            use osg::LOD\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -p            use osg::PagedLOD\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -h            use osg::HeightField\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -o outfile    output filename.osg\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "                -p speed      follow path using velocity speed im m/s\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -f speed      follow path using velocity speed im m/s\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       <filename>:            input .crg file\n" );
     exit( -1 );
 }
@@ -116,15 +122,18 @@ osg::Node* createHeightField(std::string heightFile, std::string texFile) {
 
 int getXYZ(int cpId, double u, double v, double *x, double *y, double *z) {
     if ( !crgEvaluv2xy( cpId, u, v, x, y ) ) {
-            crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to x/y.\n", u, v );
+            crgMsgPrint( dCrgMsgLevelWarn, "getXYZ: error converting u/v = %.4f / %.4f to x/y.\n", u, v );
             return 0;
     }
     if ( !crgEvaluv2z( cpId, u, v, z ) ) {
-            crgMsgPrint( dCrgMsgLevelWarn, "main: error converting u/v = %.4f / %.4f to z.\n", u, v );
+            crgMsgPrint( dCrgMsgLevelWarn, "getXYZ: error converting u/v = %.4f / %.4f to z.\n", u, v );
             return 0;
     }
+    //crgMsgPrint( dCrgMsgLevelWarn, "getXYZ: success converting u/v = %.4f / %.4f to x,y,z.\n", u, v );
     return 1;
 }
+
+
 /*! Create a transition geode composed of triangular meshes.
  */
 osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId, 
@@ -475,6 +484,53 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     return rLOD;
 }
 
+osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId, 
+            double uMin, double uMax,
+            double vMin, double vMax,
+            double du, double dv,
+            std::string tFile )
+{       
+    
+    unsigned int nStepsU = ( uMax-uMin ) / du;
+    unsigned int nStepsV = ( vMax-vMin ) / dv;
+
+    osg::HeightField* heightField = new osg::HeightField();
+    heightField->allocate(nStepsU, nStepsV);
+    heightField->setOrigin(osg::Vec3(-nStepsU / 2, -nStepsV / 2, 0));
+    heightField->setXInterval(dv);
+    heightField->setYInterval(du);
+    heightField->setSkirtHeight(1.0f);
+ 
+        /* --- create a contact point --- */
+    int cpId = crgContactPointCreate( dataSetId );
+    if ( cpId < 0 ) {
+        crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
+        return NULL;
+    }
+    
+    double x, y, z;
+    for (unsigned int u = 0; u < nStepsU ; u++) {
+        for (unsigned int v = 0; v < nStepsV ; v++) {
+            if ( ! getXYZ( cpId, u*du+uMin, v*dv+vMin, &x, &y, &z) ) continue;
+            heightField->setHeight(u, v, z);
+        }
+    }
+ 
+    osg::Geode* geode = new osg::Geode();
+    
+    //geode->addDrawable(new osg::ShapeDrawable(heightField));
+    geode->addDrawable(new osg::ShapeDrawable(heightField));
+ 
+    osg::Texture2D* tex = new osg::Texture2D(osgDB::readImageFile(tFile));
+    tex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR_MIPMAP_LINEAR);
+    tex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+    tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+    tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
+ 
+    return geode;
+}
+
 osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
 
     double uMin, uMax;
@@ -505,8 +561,17 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
     }
     
+    osg::ref_ptr<osg::Node> res;
+    if ( useLOD || usePagedLOD ) {
+        res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+    }
+    else if ( useHeightMap ) {
+        res = crg2osgHeightMap(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, rTextFile.fname);
+    }
+    else res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
+        
     //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
-    osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+    //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
@@ -545,6 +610,18 @@ int main( int argc, char** argv )
             fprintf(stderr,"Missing debug level\n");
             return 1;
         }
+        if ( ! strcmp( *argv, "-l" ) ) {
+            useLOD = 1;
+            continue;
+        }
+        if ( ! strcmp( *argv, "-p" ) ) {
+            usePagedLOD = 1;
+            continue;
+        }
+        if ( ! strcmp( *argv, "-m" ) ) {
+            useHeightMap= 1;
+            continue;
+        }
         if ( ! strcmp( *argv, "-o" ) ) {
             argv++;
             argc--;
@@ -555,7 +632,7 @@ int main( int argc, char** argv )
             fprintf(stderr,"Missing output filename\n");
             return 1;
         }
-        if ( ! strcmp( *argv, "-p" ) ) {
+        if ( ! strcmp( *argv, "-f" ) ) {
             argv++;
             argc--;
             if ( argc ) {
@@ -648,16 +725,17 @@ int main( int argc, char** argv )
             crgDataSetGetURange( dataSetId, &uMin, &uMax );
             double uCam = uMin - speed;  // Start before the beginning
             while( !viewer.done() ) {
-                double x, y, z;
-                getXYZ(cpId, uCam, 0., &x, &y, &z);
-                double xC, yC, zC;
-                getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
-                matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
-                viewer.getCamera()->setViewMatrix(matrix);
-                
+                if ( cpId>=0 ) {
+                    double x, y, z;
+                    getXYZ(cpId, uCam, 0., &x, &y, &z);
+                    double xC, yC, zC;
+                    getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
+                    matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
+                    viewer.getCamera()->setViewMatrix(matrix);
+                    uCam += 0.1*speed;
+                    if ( uCam>uMax ) uCam = uMin-speed;
+                }
                 viewer.frame();
-                uCam += 0.1*speed;
-                if ( uCam>uMax ) uCam = uMin-speed;
             }
         }
     }
