@@ -494,6 +494,15 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     unsigned int nStepsU = ( uMax-uMin ) / du;
     unsigned int nStepsV = ( vMax-vMin ) / dv;
 
+    
+    crgMsgPrint( dCrgMsgLevelNotice, "\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "crg2osg: Sampling information:\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "    delta u [m]:  %.4f\n", du );
+    crgMsgPrint( dCrgMsgLevelNotice, "    delta v [m]:  %.4f\n", dv );
+    crgMsgPrint( dCrgMsgLevelNotice, "    samples u  :  %ld\n", nStepsU );
+    crgMsgPrint( dCrgMsgLevelNotice, "    samples v  :  %ld\n", nStepsV );
+    crgMsgPrint( dCrgMsgLevelNotice, "\n" );    
+    
     osg::HeightField* heightField = new osg::HeightField();
     heightField->allocate(nStepsU, nStepsV);
     heightField->setOrigin(osg::Vec3(-nStepsU / 2, -nStepsV / 2, 0));
