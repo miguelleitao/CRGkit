@@ -748,13 +748,10 @@ int main( int argc, char** argv )
     crgDataSetModifiersPrint( dataSetId );
     crgDataSetModifiersApply( dataSetId );
     
-    //osg::ref_ptr<osg::Node> rGeode = crg2osg_all(dataSetId, delta);
+    osg::ref_ptr<osg::Node> rGeode;
+    rGeode = crg2osg_all(dataSetId, delta);
           
-        osg::ref_ptr<osg::Geode> rGeode = crg2osgTriGeode( dataSetId, 
-            110., 120.,
-             -1.5,  1.5,
-             0.1,  0.1,
-            NULL);
+    //rGeode = crg2osgTriGeode( dataSetId, 110., 120., -1.5,  1.5, 0.1,  0.1, NULL);
     
 //printf("criando hf\n");
 //osg::Node *hf = createHeightField("hm.png","grass.jpg");
