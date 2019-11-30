@@ -191,22 +191,39 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     double x, y, z;
     
     int    i, j;
-    double vMed = (vMax-vMin)/2.;
+    double vMed = (vMax+vMin)/2.;
+    
+    /* Get points
+       Order:
+       
+             vMin    vMax
+        uMax  2 ----- 4
+              | \   / |
+        uMin  1 - 3 - 5
+    */
+    
+    
+    printf("v range %f %f %f\n", vMin,vMed,vMax);
     
     getXYZ( cpId, uMin, vMin, &x, &y, &z);
     (*rVerts)[0] = osg::Vec3(x, y, z);
+    printf("got point %f %f %f\n", x,y,z);
     
     getXYZ( cpId, uMax, vMin, &x, &y, &z);
-    (*rVerts)[0] = osg::Vec3(x, y, z);
+    (*rVerts)[1] = osg::Vec3(x, y, z);
+    printf("got point %f %f %f\n", x,y,z);
     
     getXYZ( cpId, uMin, vMed, &x, &y, &z);
-    (*rVerts)[0] = osg::Vec3(x, y, z);
+    (*rVerts)[2] = osg::Vec3(x, y, z);
+    printf("got point %f %f %f\n", x,y,z);
     
     getXYZ( cpId, uMax, vMax, &x, &y, &z);
-    (*rVerts)[0] = osg::Vec3(x, y, z);
+    (*rVerts)[3] = osg::Vec3(x, y, z);
+    printf("got point %f %f %f\n", x,y,z);
     
-    getXYZ( cpId, uMax, vMin, &x, &y, &z);
-    (*rVerts)[0] = osg::Vec3(x, y, z);
+    getXYZ( cpId, uMin, vMax, &x, &y, &z);
+    (*rVerts)[4] = osg::Vec3(x, y, z);
+    printf("got point %f %f %f\n", x,y,z);
     
     rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, 0, 5 ));
     /*
@@ -731,8 +748,13 @@ int main( int argc, char** argv )
     crgDataSetModifiersPrint( dataSetId );
     crgDataSetModifiersApply( dataSetId );
     
-    osg::ref_ptr<osg::Node> rGeode = crg2osg_all(dataSetId, delta);
-  
+    //osg::ref_ptr<osg::Node> rGeode = crg2osg_all(dataSetId, delta);
+          
+        osg::ref_ptr<osg::Geode> rGeode = crg2osgTriGeode( dataSetId, 
+            110., 120.,
+             -1.5,  1.5,
+             0.1,  0.1,
+            NULL);
     
 //printf("criando hf\n");
 //osg::Node *hf = createHeightField("hm.png","grass.jpg");
@@ -742,13 +764,13 @@ int main( int argc, char** argv )
 
         // Creating the root node
         osg::Group* SceneRoot = new osg::Group;
-        // SceneRoot->addChild( rGeode );
+        SceneRoot->addChild( rGeode );
 
-        osg :: ref_ptr<osg::LOD> lod = new osg::LOD ;
-        lod->addChild(rGeode, 0.0f, FLT_MAX);
+ //       osg :: ref_ptr<osg::LOD> lod = new osg::LOD ;
+   //     lod->addChild(rGeode, 0.0f, FLT_MAX);
      //   lod->addChild(hf, 50.0f, FLT_MAX );
 
-        SceneRoot->addChild( lod );
+     //   SceneRoot->addChild( lod );
         
   //      SceneRoot->addChild( hf );
         if ( outfilename ) {
