@@ -88,6 +88,9 @@ void usage()
     exit( -1 );
 }
 
+/*! Create osg::HeightField from heightMap image file.
+ *  Demo function, not used in CRGkit.
+ */
 osg::Node* createHeightField(std::string heightFile, std::string texFile) {
  
     osg::Image* heightMap = osgDB::readImageFile(heightFile);
@@ -135,6 +138,7 @@ int getXYZ(int cpId, double u, double v, double *x, double *y, double *z) {
 
 
 /*! Create a transition geode composed of triangular meshes.
+ *  Transition geode should be used when its neighbors have different levels of detail.
  */
 osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId, 
             double uMin, double uMax,
@@ -160,9 +164,10 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     /* --- now set the sampling parameters --- */   
     nStepsV = 1 + (vMax-vMin - (1e-15)) / dv;
     dv = ( vMax - vMin ) / nStepsV;
-    
+    /*
     nStepsU = log(nStepsV-1)/log(2.);
     du = ( uMax - uMin ) / nStepsU;
+    */
     
     /*
     crgMsgPrint( dCrgMsgLevelNotice, "\n" );
@@ -175,9 +180,10 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     */
     // Init Triangular mesh
     osg::ref_ptr<osg::Geometry> rTri = new osg::Geometry;
+    
+    int nVerts=5;
+    
     // Verts
-    int nVerts = 2*nStepsU+3*(int)pow(2,nStepsU)-3;
-    printf("StepsU: %d, nVerts: %d\n", nStepsU, nVerts);
     osg::ref_ptr<osg::Vec3Array> rVerts = new osg::Vec3Array( nVerts );
     // Texture Verts
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array( nVerts );      
@@ -185,7 +191,25 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     double x, y, z;
     
     int    i, j;
- 
+    double vMed = (vMax-vMin)/2.;
+    
+    getXYZ( cpId, uMin, vMin, &x, &y, &z);
+    (*rVerts)[0] = osg::Vec3(x, y, z);
+    
+    getXYZ( cpId, uMax, vMin, &x, &y, &z);
+    (*rVerts)[0] = osg::Vec3(x, y, z);
+    
+    getXYZ( cpId, uMin, vMed, &x, &y, &z);
+    (*rVerts)[0] = osg::Vec3(x, y, z);
+    
+    getXYZ( cpId, uMax, vMax, &x, &y, &z);
+    (*rVerts)[0] = osg::Vec3(x, y, z);
+    
+    getXYZ( cpId, uMax, vMin, &x, &y, &z);
+    (*rVerts)[0] = osg::Vec3(x, y, z);
+    
+    rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, 0, 5 ));
+    /*
     // printf("Set of Crossing sections\n");
     double u1, u2, v = 0.;
     int idx = 0;
@@ -216,6 +240,9 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
         printf("adding %d %d\n", idxFirst, idx);
         rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, idxFirst, idx-idxFirst ));
     }
+    */
+    
+    
     
     rTri->setVertexArray(rVerts);
     rTri->setTexCoordArray(0, rTexCoords);
@@ -244,6 +271,8 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     return rGeode;
 }
 
+/*! Create a osg::Geode for a road section.
+ */
 osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -405,9 +434,14 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
     rLLOD->addChild(geo, 0., lodDist/2.);
         
+  //  geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du*2, dv*2, tFile);
+    geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
+    rLLOD->addChild(geo, lodDist/2., lodDist/2.+uMax-uMin);
+
+    
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, du*2, dv*2, tFile);
     //geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, du, dv, tFile);
-    rLLOD->addChild(geo, lodDist/2., lodDist);
+    rLLOD->addChild(geo, lodDist/2.+uMax-uMin, lodDist);
     
     // Single Poligon
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
@@ -416,6 +450,10 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     return rLLOD;
 }
 
+/*  Recursively create a multi level-of-detail representation of road section.
+ *  Return a reference to a osg::LOD object.
+ *  
+ */
 osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -484,6 +522,11 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     return rLOD;
 }
 
+/*! Creates a osg::HeightField for a road section.
+ *  Experimental implementation.
+ *  Since HeightFields are buiklt into regular grids, this implementation discards reference line information.
+ *  Result is always a strait line road.
+ */
 osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId, 
             double uMin, double uMax,
             double vMin, double vMax,
@@ -755,7 +798,7 @@ int main( int argc, char** argv )
         fprintf(stderr, "invalid node\n");
         return 1;
     }
-    crgMsgPrint( dCrgMsgLevelNotice, "main: normal termination\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "main: done.\n" );
     
     return 0;
 }
