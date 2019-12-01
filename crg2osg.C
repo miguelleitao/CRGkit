@@ -84,7 +84,9 @@ void usage()
 {
     crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2osg [options] <filename>\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "                -d delta      define maximum sampling distance\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -d delta      define maximum sampling distance U and V\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -du du        define maximum sampling distance for U\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                -dv dv        define maximum sampling distance for V\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -l            use osg::LOD\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -p            use osg::PagedLOD\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                -h            use osg::HeightField\n" );
@@ -591,7 +593,7 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     return geode;
 }
 
-osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
+osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV) {
 
     double uMin, uMax;
     double vMin, vMax;
@@ -623,15 +625,15 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
     
     osg::ref_ptr<osg::Node> res;
     if ( useLOD || usePagedLOD ) {
-        res = crg2osgLOD(dataSetId, uMin, uMax, vMin, vMax, delta*2, delta, &rTextFile);
+        res = crg2osgLOD(dataSetId, uMin, uMax, vMin, vMax, deltaU*2, deltaV, &rTextFile);
     }
     else if ( useHeightMap ) {
-        res = crg2osgHeightMap(dataSetId, uMin, uMax, vMin, vMax, delta, delta, rTextFile.fname);
+        res = crg2osgHeightMap(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, rTextFile.fname);
     }
-    else res = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, delta, delta, &rTextFile);
+    else res = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, &rTextFile);
         
-    //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta,  delta, &rTextFile);
-    //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  delta*2,  delta, &rTextFile);
+    //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  deltaU,  deltaV, &rTextFile);
+    //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  deltaU*2,  deltaV, &rTextFile);
     free(rTextFile.fname);
     return res;
 }
@@ -688,7 +690,8 @@ int main( int argc, char** argv )
     char*  filename = NULL;
     char*  outfilename = NULL;
     int    dataSetId = 0;
-    double delta = 0.1;
+    double deltaU = 0.1;
+    double deltaV = 0.1;
     
     /* --- decode the command line --- */
     if ( argc < 2 )
@@ -701,16 +704,35 @@ int main( int argc, char** argv )
         argc--;
         
         if ( *argv[0] != '-' ) continue;
-       
+        char cdt;
         switch( (*argv)[1] ) {
             case 'h':
                 usage();
                 return 1;
             case 'd':
+                cdt = (*argv)[2];
                 argv++;
                 argc--;
                 if ( argc ) {
-                    delta = atof(*argv);
+                    double delta = atof(*argv);
+                    switch ( cdt ) {
+                        case 'u':
+                        case 'y':
+                            deltaU = delta;
+                            break;
+                        case 'v':
+                        case 'x':
+                            deltaV = delta;
+                            break;
+                        case 0:
+                        case ' ':
+                            deltaU = delta;
+                            deltaV = delta;
+                            break;
+                        default:
+                            fprintf(stderr,"Bad option '%s'\n", *(argv-1) );
+                            break;
+                    }
                     continue;
                 }
                 fprintf(stderr,"Missing delta value\n");
@@ -783,7 +805,7 @@ int main( int argc, char** argv )
     crgDataSetModifiersApply( dataSetId );
     
     osg::ref_ptr<osg::Node> rGeode;
-    rGeode = crg2osg_all(dataSetId, delta);
+    rGeode = crg2osg_all(dataSetId, deltaU, deltaV);
           
     //rGeode = crg2osgTriGeode( dataSetId, 110., 120., -1.5,  1.5, 0.1,  0.1, NULL);
         
