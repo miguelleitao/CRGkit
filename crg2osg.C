@@ -179,12 +179,6 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     }
     
     int    nStepsU, nStepsV;
-    double dimTexU = 1.;
-    double dimTexV = 1.;
-    if ( tFile ) {
-        dimTexU = tFile->dimU;
-        dimTexV = tFile->dimV;
-    }
 
     /* --- now set the sampling parameters --- */   
     nStepsU = 1 + (uMax-uMin - (1e-15)) / du;
@@ -192,10 +186,6 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     
     nStepsV = 1 + (vMax-vMin - (1e-15)) / dv;
     dv = ( vMax - vMin ) / nStepsV;
- 
-    /*
-    nStepsU = log(nStepsV-1)/log(2.);
-    */
     
     /*
     crgMsgPrint( dCrgMsgLevelNotice, "\n" );
@@ -214,10 +204,7 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     // Verts
     osg::ref_ptr<osg::Vec3Array> rVerts = new osg::Vec3Array( nVerts );
     // Texture Verts
-    osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array( nVerts );      
-    
-    double x, y, z;
-    int    j;
+    osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array( nVerts );   
     
     /* Order of vertexes
        
@@ -251,7 +238,8 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     //double u1 = uMin;
     //double u2 = u1 + du;
     double u2 = uMax;
-    double u1 = u2-du;
+    double u1 = u2-du;   
+    int    j;
     
     registerVertex(cpId, &idx, u2, vMin, rVerts, rTexCoords, tFile);
 
@@ -301,18 +289,10 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
             v = vMin + dv * j;
             
             // Vertex ONE
-            if ( ! getXYZ( cpId, u1, v, &x, &y, &z) ) continue;
-            // if ( i==0 && j==0 ) z=0.1;   // Mark first vertex for debug purposes
-            (*rVerts)[idx] = osg::Vec3(x, y, z);
-            (*rTexCoords)[idx] = osg::Vec2( u1/dimTexU, v/dimTexV + centerTextureV );
-            idx += 1;
-            
+            registerVertex(cpId, &idx, u1, v, rVerts, rTexCoords, tFile);
+        
             // Vertex TWO
-            if ( ! getXYZ( cpId, u2, v, &x, &y, &z) ) continue;
-            (*rVerts)[idx] = osg::Vec3(x, y, z);
-            (*rTexCoords)[idx] = osg::Vec2(u2/dimTexU, v/dimTexV + centerTextureV );
-            idx += 1;
-            
+            registerVertex(cpId, &idx, u2, v, rVerts, rTexCoords, tFile);
         } 
         rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, idx-(nStepsV*2+2), nStepsV*2+2 ) );
     }
@@ -365,13 +345,7 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     }
     
     int    nStepsU, nStepsV;
-    double dimTexU = 1.;
-    double dimTexV = 1.;
-    if ( tFile ) {
-        dimTexU = tFile->dimU;
-        dimTexV = tFile->dimV;
-    }
-
+    
     /* --- now set the sampling parameters --- */
     nStepsU = 1 + (uMax-uMin - (1e-15)) / du;
     du = ( uMax - uMin ) / nStepsU;
@@ -393,8 +367,6 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     // Texture Verts
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array(2*(nStepsU+1)*(nStepsV+1));      
     
-    double x, y, z;
-    
     int    i, j;
     if ( 0 && nStepsU<nStepsV ) {  // Set of Cross sections
         // printf("Set of Crossing sections\n");
@@ -404,20 +376,14 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
             u1 = uMin + du * i;
             u2 = uMin + du * (i+1);
             for( j=0 ; j<=nStepsV ; j++ ) {
-                 v = vMin + dv * j;
+                v = vMin + dv * j;
+                int idx = 2*(i*(nStepsV+1)+j);
                 
                 // Vertex ONE
-                if ( ! getXYZ( cpId, u1, v, &x, &y, &z) ) continue;
-                // if ( i==0 && j==0 ) z=0.1;   // Mark first vertex for debug purposes
-                int idx = 2*(i*(nStepsV+1)+j);
-                (*rVerts)[idx] = osg::Vec3(x, y, z);
-                (*rTexCoords)[idx] = osg::Vec2( u1/dimTexU, v/dimTexV + centerTextureV );
-            
+                registerVertex(cpId, &idx, u1, v, rVerts, rTexCoords, tFile);
+                
                 // Vertex TWO
-                if ( ! getXYZ( cpId, u2, v, &x, &y, &z) ) continue;
-                idx += 1;
-                (*rVerts)[idx] = osg::Vec3(x, y, z);
-                (*rTexCoords)[idx] = osg::Vec2(u2/dimTexU, v/dimTexV + centerTextureV );
+                registerVertex(cpId, &idx, u2, v, rVerts, rTexCoords, tFile);
             } 
             rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, i*(nStepsV*2+2), nStepsV*2+2 ) );
         }
@@ -430,18 +396,13 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
             v2 = vMin + dv * (j+1);
             for( i=0 ; i<=nStepsU ; i++ ) {
                 u = uMin + du * i;
+                int idx = 2*(j*(nStepsU+1)+i);
                 
                 // Vertex ONE
-                if ( ! getXYZ( cpId, u, v1, &x, &y, &z) ) continue;
-                int idx = 2*(j*(nStepsU+1)+i);
-                (*rVerts)[idx] = osg::Vec3(x, y, z);
-                (*rTexCoords)[idx] = osg::Vec2( u/dimTexU, v1/dimTexV + centerTextureV );
-            
+                registerVertex(cpId, &idx, u, v1, rVerts, rTexCoords, tFile);
+                
                 // Vertex TWO
-                if ( ! getXYZ( cpId, u, v2, &x, &y, &z) ) continue;
-                idx += 1;
-                (*rVerts)[idx] = osg::Vec3(x, y, z);
-                (*rTexCoords)[idx] = osg::Vec2( u/dimTexU, v2/dimTexV + centerTextureV );
+                registerVertex(cpId, &idx, u, v2, rVerts, rTexCoords, tFile);
             }
             rQuad->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, j*(nStepsU*2+2), nStepsU*2+2 ) );
         }
@@ -466,26 +427,6 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
 	rGeode->setName("crgRoad");
 	rGeode->addDrawable(rQuad);
 	
-    // Texture
-    //osg::ref_ptr<osg::Image> rImage = new osg::Image;
-   /*
-    if ( tFile && tFile->fname ) {
-        osg::ref_ptr<osg::Image> rImage(osgDB::readImageFile(tFile->fname));
-        if ( rImage ) {
-            // Bind image to 2D texture
-            osg::ref_ptr<osg::Texture2D> rTex = NULL;
-            rTex = new osg::Texture2D;
-            rTex->setImage(rImage);
-            rTex->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
-            rTex->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
-
-            // Attach Texture to state of the geode
-            osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
-            rState->setTextureAttributeAndModes(0, rTex, osg::StateAttribute::ON);
-        }
-        else fprintf(stderr, "Texture Image '%s' not loaded.\n", tFile->fname);
-    }
-    */
     if ( tFile && tFile->tex2D ) {
             // Attach Texture to state of the geode
             osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
