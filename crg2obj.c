@@ -175,10 +175,9 @@ int main( int argc, char** argv )
                   );
         }
     }
-    
 
-    
-    crgMsgPrint( dCrgMsgLevelNotice, "main: normal termination\n" );
+    crgDataSetRelease(dataSetId);
+    crgMsgPrint( dCrgMsgLevelNotice, "main: done.\n" );
     
     return 0;
 }

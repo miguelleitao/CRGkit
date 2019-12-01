@@ -160,27 +160,11 @@ int main( int argc, char** argv )
                     x, y, z,        phi, 0., 0.);
             
             lastX = x;
-            lastY = y;
-            /* --- now all the way back and check the result --- */
-            /*
-            if ( !crgEvalxy2uv( cpId, x, y, &u, &v ) )
-                crgMsgPrint( dCrgMsgLevelWarn, "main: error converting x/y = %.3f / %.3f to u/v.\n",  x, y );
-            else
-            {
-                double deltaU = uMem - u;
-                double deltaV = vMem - v;
-                
-                crgMsgPrint( dCrgMsgLevelNotice, "main: u/v = %+10.4f / %+10.4f ----> x/y = %+10.4f / %+10.4f ----> u/v = %+10.4f / %+10.4f.\n",
-                                                    uMem, vMem, x, y, u, v );
-                                                
-                if ( fabs( deltaU ) > 1.0e-5 || fabs( deltaV ) > 1.e-5 )
-                    crgMsgPrint( dCrgMsgLevelNotice, "main: computation error when converting back: du/dv = %.8f / %.8f\n",
-                                                        deltaU, deltaV );
-            }
-            */        
-        
+            lastY = y;        
     }
-    crgMsgPrint( dCrgMsgLevelNotice, "main: normal termination\n" );
+    
+    crgDataSetRelease(dataSetId);
+    crgMsgPrint( dCrgMsgLevelNotice, "main: done.\n" );
     
     return 1;
 }

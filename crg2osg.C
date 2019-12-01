@@ -461,7 +461,30 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     // Main LOD node for present level.
     osg::ref_ptr<osg::LOD> rLLOD = new osg::LOD;
     osg::ref_ptr<osg::Geode> geo;
+
+    // Single Poligon
+    geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
+    rLLOD->addChild(geo, lodDist+uMax-uMin, FLT_MAX);
+    double level = 1.;
+    while(level<9. && lodDist/level>=1.) {
+        geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/level, (vMax-vMin)/level, tFile);
+        rLLOD->addChild(geo, lodDist/level, lodDist/level+uMax-uMin);
     
+        geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2./level, (vMax-vMin)/2./level, tFile);
+        rLLOD->addChild(geo, lodDist/2./level+uMax-uMin, lodDist/level); 
+       /*
+        geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2., (vMax-vMin)/2., tFile);
+        rLLOD->addChild(geo, lodDist/2., lodDist/2.+uMax-uMin);
+    
+        // Full Detail
+        geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/4., (vMax-vMin)/4., tFile);
+        rLLOD->addChild(geo, 0., lodDist/2.);
+        */
+        level *= 2.;
+    }
+    int nC = rLLOD->getNumChildren();
+    rLLOD->setRange(nC-1, 0., lodDist*2./level);
+    /*
     // Full Detail
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/4., (vMax-vMin)/4., tFile);
     rLLOD->addChild(geo, 0., lodDist/2.);
@@ -478,6 +501,7 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     // Single Poligon
     geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
     rLLOD->addChild(geo, lodDist+uMax-uMin, FLT_MAX);
+    */
     
     return rLLOD;
 }
@@ -605,7 +629,7 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV)
     double uMin, uMax;
     double vMin, vMax;
     
-    /* --- get extents of data set --- */
+    // get extents of data set
     crgDataSetGetURange( dataSetId, &uMin, &uMax );
     crgDataSetGetVRange( dataSetId, &vMin, &vMax );
     
@@ -613,6 +637,8 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV)
     rTextFile.fname = strdup(DEFAULT_ROAD_TEXTURE_FNAME);
     rTextFile.dimU = 6.;
     rTextFile.dimV = vMax-vMin;
+    rTextFile.centerU = 0.0;
+    rTextFile.centerV = 0.5;
     rTextFile.tex2D = NULL;  // Not loaded yet
     
     if ( rTextFile.fname && *(rTextFile.fname) ) {
@@ -625,7 +651,7 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV)
             rTex->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
             rTex->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
             rTextFile.tex2D = rTex;
-            printf("Texture file %s loaded\n", rTextFile.fname);
+            printf("Texture file '%s' loaded\n", rTextFile.fname);
         }
         else fprintf(stderr, "Texture Image '%s' not loaded.\n", rTextFile.fname);
     }
@@ -700,7 +726,7 @@ int main( int argc, char** argv )
     double deltaU = 0.1;
     double deltaV = 0.1;
     
-    /* --- decode the command line --- */
+    // Decode the command line.
     if ( argc < 2 )
         usage();
     
@@ -792,22 +818,22 @@ int main( int argc, char** argv )
         argc--;
     }
     
-    /* --- now load the file --- */
     crgMsgSetLevel( dCrgMsgLevelNotice );
     
+    // Load input file
     if ( ( dataSetId = crgLoaderReadFile( filename ) ) <= 0 ) {
-        crgMsgPrint( dCrgMsgLevelFatal, "main: error reading data.\n" );
+        crgMsgPrint( dCrgMsgLevelFatal, "main: Error reading data.\n" );
         usage();
         return -1;
     }
 
-    /* --- check CRG data for consistency and accuracy --- */
+    // Check CRG data for consistency and accuracy
     if ( !crgCheck( dataSetId ) ) {
-        crgMsgPrint ( dCrgMsgLevelFatal, "main: could not validate crg data. \n" );
+        crgMsgPrint ( dCrgMsgLevelFatal, "main: Could not validate crg data. \n" );
         return -1;
     }
     
-    /* --- apply (default) modifiers --- */
+    // Apply (default) modifiers.
     crgDataSetModifiersPrint( dataSetId );
     crgDataSetModifiersApply( dataSetId );
     
