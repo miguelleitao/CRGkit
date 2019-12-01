@@ -295,8 +295,7 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
  
     idx = 0;
     double v = 0.;
-    for( u1=uMin ; u1+du<=uMax-du+1e-8 ; u1+=du )
-    {
+    for( u1=uMin ; u1+du<=uMax-du+1e-8 ; u1+=du ) {
         u2 = u1 + du;
         for( j=0 ; j<=nStepsV ; j++ ) {
             v = vMin + dv * j;
@@ -311,7 +310,7 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     }
     
     if (nVerts!=idx) {
-        fprintf(stderr, "Error: Primitive number\n");
+        fprintf(stderr, "Error: Wrong number of graphics primitives in crg2osgTriGeode.\n");
         exit(1);
     }
     rQuad->setVertexArray(rVerts);
