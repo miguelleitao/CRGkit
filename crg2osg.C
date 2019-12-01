@@ -61,7 +61,7 @@
 // Texture v coord for reference line.
 //  0.0  => Texture border on road reference line.
 //  0.5  => Texture center on road reference line.
-#define centerTextureV  (0.5)
+//define centerTextureV  (0.5)
 
 const int    ScaleFactor = 8;
 const double ViewDistanceFactor = 25.;
@@ -74,11 +74,12 @@ typedef struct {
     char    *fname;
     double  dimU;
     double  dimV;
+    double  centerU;    //< Texture u coord for beginning of road. 
+    double  centerV;    //< Texture v coord for reference line.
+                        //<  0.0  => Texture border on road reference line.
+                        //<  0.5  => Texture center on road reference line.
     osg::ref_ptr<osg::Texture2D> tex2D;
 } Texture;
-
-
-
     
 void usage()
 {
@@ -155,14 +156,21 @@ int registerVertex(int cpId, int *idx, double u, double v,
     double x, y, z;
     if ( ! getXYZ( cpId, u, v, &x, &y, &z) ) 
         return 0;
+    
+    // Default texture mapping params
     double dimTexU = 1.;
     double dimTexV = 1.;
+    double centerTextureU = 0.0;
+    double centerTextureV = 0.5;
+    
     if ( tFile ) {
         dimTexU = tFile->dimU;
         dimTexV = tFile->dimV;
+        centerTextureU = tFile->centerU;
+        centerTextureV = tFile->centerV;
     }
     (*rVerts)[*idx] = osg::Vec3(x, y, z);
-    (*rTexCoords)[*idx] = osg::Vec2( u/dimTexU, v/dimTexV + centerTextureV );
+    (*rTexCoords)[*idx] = osg::Vec2( u/dimTexU + centerTextureU, v/dimTexV + centerTextureV );
     *idx += 1;    
     return 1;
 }
