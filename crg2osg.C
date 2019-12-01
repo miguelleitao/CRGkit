@@ -73,6 +73,9 @@ typedef struct {
     double  dimV;
     osg::ref_ptr<osg::Texture2D> tex2D;
 } Texture;
+
+
+
     
 void usage()
 {
@@ -136,6 +139,28 @@ int getXYZ(int cpId, double u, double v, double *x, double *y, double *z) {
     return 1;
 }
 
+/*! Register a vertex into an osg::PrimitiveSet.
+ *  Vertex is registered into position *idx of rVerts and rTextCoords arrays.
+ *  *idx is incremented.
+ */
+int registerVertex(int cpId, int *idx, double u, double v, 
+                   osg::ref_ptr<osg::Vec3Array> rVerts, 
+                   osg::ref_ptr<osg::Vec2Array> rTexCoords,
+                   Texture *tFile=NULL ) {      
+    double x, y, z;
+    if ( ! getXYZ( cpId, u, v, &x, &y, &z) ) 
+        return 0;
+    double dimTexU = 1.;
+    double dimTexV = 1.;
+    if ( tFile ) {
+        dimTexU = tFile->dimU;
+        dimTexV = tFile->dimV;
+    }
+    (*rVerts)[*idx] = osg::Vec3(x, y, z);
+    (*rTexCoords)[*idx] = osg::Vec2( u/dimTexU, v/dimTexV + centerTextureV );
+    *idx += 1;    
+    return 1;
+}
 
 /*! Create a transition geode composed of triangular meshes.
  *  Transition geode should be used when its neighbors have different levels of detail.
@@ -192,18 +217,19 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     osg::ref_ptr<osg::Vec2Array> rTexCoords = new osg::Vec2Array( nVerts );      
     
     double x, y, z;
+    int    j;
     
-    int    i, j;
-    
-    /* Get points
-       Order:
+    /* Order of vertexes
+       
+       Single strip:
        
              vMin    vMax
         uMin  2 ----- 4
               | \   / |
         uMax  1 - 3 - 5
         
-               
+       Double strip: 
+       
              vMin                vMax
         uMin  2 ----------------- 4
               | \               / |
@@ -226,32 +252,16 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     //double u2 = u1 + du;
     double u2 = uMax;
     double u1 = u2-du;
-    getXYZ( cpId, u2, vMin, &x, &y, &z);
-    (*rVerts)[idx] = osg::Vec3(x, y, z);
-    (*rTexCoords)[idx++] = osg::Vec2( u2/dimTexU, vMin/dimTexV + centerTextureV );
-    //printf("got point %f %f %f\n", x,y,z);
     
+    registerVertex(cpId, &idx, u2, vMin, rVerts, rTexCoords, tFile);
+
     do {
         double vMed = (v2+v1)/2.;
-        getXYZ( cpId, u1, v1, &x, &y, &z);
-        (*rVerts)[idx] = osg::Vec3(x, y, z);
-        (*rTexCoords)[idx++] = osg::Vec2( uMin/dimTexU, v1/dimTexV + centerTextureV );
-        //printf("idx: %d, got point %f %f %f\n", idx, x,y,z);
         
-        getXYZ( cpId, u2, vMed, &x, &y, &z);
-        (*rVerts)[idx] = osg::Vec3(x, y, z);
-        (*rTexCoords)[idx++] = osg::Vec2( u2/dimTexU, vMed/dimTexV + centerTextureV );
-        //printf("got point %f %f %f\n", x,y,z);
-        
-        getXYZ( cpId, u1, v2, &x, &y, &z);
-        (*rVerts)[idx] = osg::Vec3(x, y, z);
-        (*rTexCoords)[idx++] = osg::Vec2( uMin/dimTexU, v2/dimTexV + centerTextureV );
-        //printf("got point %f %f %f\n", x,y,z);
-        
-        getXYZ( cpId, u2, v2, &x, &y, &z);
-        (*rVerts)[idx] = osg::Vec3(x, y, z);
-        (*rTexCoords)[idx++] = osg::Vec2( u2/dimTexU, v2/dimTexV + centerTextureV );
-        //printf("got point %f %f %f\n", x,y,z);
+        registerVertex(cpId, &idx, u1, v1,   rVerts, rTexCoords, tFile);
+        registerVertex(cpId, &idx, u2, vMed, rVerts, rTexCoords, tFile);
+        registerVertex(cpId, &idx, u1, v2,   rVerts, rTexCoords, tFile);
+        registerVertex(cpId, &idx, u2, v2,   rVerts, rTexCoords, tFile);
         
         rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, idx-5, 5 ));
         v1 = v2;
