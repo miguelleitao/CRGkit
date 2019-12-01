@@ -26,6 +26,7 @@
    extern "C" {    // Functions from OpenCRG library
         extern int crgCheck(int);
         extern int crgLoaderReadFile(char const*);
+        extern int crgDataSetRelease(int);
         extern void crgMsgPrint(int, char const*, ...);
         extern void crgDataSetModifiersPrint(int);
         extern void crgDataSetModifiersApply(int);
@@ -36,6 +37,7 @@
         extern int crgEvaluv2z(int, double, double, double*);
         extern int crgEvaluv2pk(int, double, double, double*, double*);
         extern void crgMsgSetLevel(int);
+        extern int crgContactPointDelete(int);
     };
     
 #include <stdlib.h>
@@ -66,6 +68,7 @@ const double ViewDistanceFactor = 25.;
 int   useLOD = 0;
 int   usePagedLOD = 0;
 int   useHeightMap = 0;
+double speed = -1.0;
     
 typedef struct {
     char    *fname;
@@ -326,6 +329,7 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
         osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
         rState->setTextureAttributeAndModes(0, tFile->tex2D, osg::StateAttribute::ON); 
     }
+    crgContactPointDelete( cpId );
     return rGeode;
 }
 
@@ -432,6 +436,7 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
             osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
             rState->setTextureAttributeAndModes(0, tFile->tex2D, osg::StateAttribute::ON); 
     }
+    if ( cpId>=0 ) crgContactPointDelete( cpId );
     return rGeode;
 }
 
@@ -538,7 +543,6 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     unsigned int nStepsU = ( uMax-uMin ) / du;
     unsigned int nStepsV = ( vMax-vMin ) / dv;
 
-    
     crgMsgPrint( dCrgMsgLevelNotice, "\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "crg2osg: Sampling information:\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "    delta u [m]:  %.4f\n", du );
@@ -583,7 +587,7 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
     tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
     tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
- 
+    if ( cpId>=0 ) crgContactPointDelete( cpId ); 
     return geode;
 }
 
@@ -631,48 +635,53 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
     free(rTextFile.fname);
     return res;
 }
-/*
-voif crgViewer(int dataSetId, osg::ref_ptr<osg::Node> SceneRoot) {
-            // Creating the viewer
-            osgViewer::Viewer viewer ;
-            viewer.setSceneData( SceneRoot );
-            
-            // Setup camera
-            osg::Matrix matrix;
-            osg::Camera *viewCam = viewer.getCamera();
-            int cpId = -1;
-            if ( speed<0. ) {
-                matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
-                //viewer.getCamera()->setViewMatrix(matrix);
-                viewCam->setViewMatrix(matrix);
-                viewer.setCameraManipulator(  new osgGA::TrackballManipulator() );
-            }
-            else {
-                // create a contact point 
-                cpId = crgContactPointCreate( dataSetId );
-                if ( cpId < 0 ) 
-                    crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
-            }
-            // get extents of data set.
-            double uMin, uMax;
-            crgDataSetGetURange( dataSetId, &uMin, &uMax );
-            double uCam = uMin - speed;  // Start before the beginning
-            while( !viewer.done() ) {
-                if ( cpId>=0 ) {
-                    double x, y, z;
-                    getXYZ(cpId, uCam, 0., &x, &y, &z);
-                    double xC, yC, zC;
-                    getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
-                    matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
-                    viewer.getCamera()->setViewMatrix(matrix);
-                    uCam += 0.1*speed;
-                    if ( uCam>uMax ) uCam = uMin-speed;
-                }
-                viewer.frame();
-            }
+
+void crgViewer(int dataSetId, osg::ref_ptr<osg::Node> rGeode) {
     
+        // Creating the scene root node.
+        osg::ref_ptr<osg::Group> SceneRoot = new osg::Group;
+        SceneRoot->addChild( rGeode );
+    
+        // Creating the viewer
+        osgViewer::Viewer viewer ;
+        viewer.setSceneData( SceneRoot );
+        
+        // Setup camera
+        osg::Matrix matrix;
+        osg::Camera *viewCam = viewer.getCamera();
+        int cpId = -1;
+        if ( speed<0. ) {
+            matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
+            //viewer.getCamera()->setViewMatrix(matrix);
+            viewCam->setViewMatrix(matrix);
+            viewer.setCameraManipulator( new osgGA::TrackballManipulator() );
+        }
+        else {
+            // create a contact point 
+            cpId = crgContactPointCreate( dataSetId );
+            if ( cpId < 0 ) 
+                crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
+        }
+        // get extents of data set.
+        double uMin, uMax;
+        crgDataSetGetURange( dataSetId, &uMin, &uMax );
+        double uCam = uMin - speed;  // Start before the beginning
+        while( !viewer.done() ) {
+            if ( cpId>=0 ) {
+                double x, y, z;
+                getXYZ(cpId, uCam, 0., &x, &y, &z);
+                double xC, yC, zC;
+                getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
+                matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
+                viewer.getCamera()->setViewMatrix(matrix);
+                uCam += 0.1*speed;
+                if ( uCam>uMax ) uCam = uMin-speed;
+            }
+            viewer.frame();
+        }
+        if ( cpId>=0 ) crgContactPointDelete( cpId );
 }
-*/
+
 
 int main( int argc, char** argv ) 
 {
@@ -680,7 +689,6 @@ int main( int argc, char** argv )
     char*  outfilename = NULL;
     int    dataSetId = 0;
     double delta = 0.1;
-    double speed = -1.0;
     
     /* --- decode the command line --- */
     if ( argc < 2 )
@@ -778,65 +786,18 @@ int main( int argc, char** argv )
     rGeode = crg2osg_all(dataSetId, delta);
           
     //rGeode = crg2osgTriGeode( dataSetId, 110., 120., -1.5,  1.5, 0.1,  0.1, NULL);
-    
-//printf("criando hf\n");
-//osg::Node *hf = createHeightField("hm.png","grass.jpg");
-//printf("criou hf\n");
         
     if (rGeode!=NULL) {
-
-        // Creating the root node
-        osg::Group* SceneRoot = new osg::Group;
-        SceneRoot->addChild( rGeode );
-       
-        // SceneRoot->addChild( hf );
-        if ( outfilename ) {
+        if ( outfilename ) 
             osgDB::writeNodeFile(*rGeode, outfilename );
-        }
-        else {
-            // Creating the viewer
-            osgViewer::Viewer viewer ;
-            viewer.setSceneData( SceneRoot );
-            
-            // Setup camera
-            osg::Matrix matrix;
-            osg::Camera *viewCam = viewer.getCamera();
-            int cpId = -1;
-            if ( speed<0. ) {
-                matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
-                //viewer.getCamera()->setViewMatrix(matrix);
-                viewCam->setViewMatrix(matrix);
-                viewer.setCameraManipulator(  new osgGA::TrackballManipulator() );
-            }
-            else {
-                /* --- create a contact point --- */
-                cpId = crgContactPointCreate( dataSetId );
-                if ( cpId < 0 ) 
-                    crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
-            }
-            /* --- get extents of data set --- */
-            double uMin, uMax;
-            crgDataSetGetURange( dataSetId, &uMin, &uMax );
-            double uCam = uMin - speed;  // Start before the beginning
-            while( !viewer.done() ) {
-                if ( cpId>=0 ) {
-                    double x, y, z;
-                    getXYZ(cpId, uCam, 0., &x, &y, &z);
-                    double xC, yC, zC;
-                    getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
-                    matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
-                    viewer.getCamera()->setViewMatrix(matrix);
-                    uCam += 0.1*speed;
-                    if ( uCam>uMax ) uCam = uMin-speed;
-                }
-                viewer.frame();
-            }
-        }
+        else 
+            crgViewer(dataSetId,rGeode);
     }
     else {
         fprintf(stderr, "invalid node\n");
         return 1;
     }
+    crgDataSetRelease(dataSetId);
     crgMsgPrint( dCrgMsgLevelNotice, "main: done.\n" );
     
     return 0;
