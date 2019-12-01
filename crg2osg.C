@@ -317,16 +317,14 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
     // Color
     rColor = new osg::Vec4Array;
     rColor->push_back( osg::Vec4(1., 1., 1., 1.) );
-    rQuad->setColorArray(rColor);
-	rQuad->setColorBinding(osg::Geometry::BIND_OVERALL);
+    rQuad->setColorArray( rColor );
+	rQuad->setColorBinding( osg::Geometry::BIND_OVERALL );
     
     // Normal
     rNormal = new osg::Vec3Array;
-	rNormal->push_back( osg::Vec3(0., 0., 1.));
-	rQuad->setNormalArray ( rNormal );
+	rNormal->push_back( osg::Vec3(0., 0., 1.) );
+	rQuad->setNormalArray( rNormal );
 	rQuad->setNormalBinding( osg::Geometry::BIND_OVERALL );
-    
-    
     
 	osg::ref_ptr<osg::Geode> rGeode = new osg::Geode();
 	rGeode->setName("crgRoadTriStrip");
@@ -367,7 +365,6 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
     /* --- now set the sampling parameters --- */
     nStepsU = 1 + (uMax-uMin - (1e-15)) / du;
     du = ( uMax - uMin ) / nStepsU;
-    
     nStepsV = 1 + (vMax-vMin - (1e-15)) / dv;
     dv = ( vMax - vMin ) / nStepsV;
     /*
