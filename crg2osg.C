@@ -211,14 +211,14 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
        Single strip:
        
              vMin    vMax
-        uMin  2 ----- 4
+        uMin  1 ----- 3
               | \   / |
-        uMax  1 - 3 - 5
+        uMax  0 - 2 - 4
         
        Double strip: 
        
              vMin                vMax
-        uMin  2 ----------------- 4
+        uMin  1 ----------------- 3
               | \               / |
               |  \             /  |
               |   \           /   |
@@ -226,10 +226,10 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
               |     \       /     |
               |      \     /      |
               |       \   /       |
-        uMed  1 ------- 3 ------- 5
-        uMed  2 ----- 4   6 ----- 8
+        uMed  0 ------- 2 ------- 4
+        uMed  1 ----- 3   5 ----- 7
               | \   / |   | \   / |
-        uMax  1 - 3 - 5 = 5 - 7 - 9
+        uMax  0 - 2 - 4 = 4 - 6 - 8
     */
     
     int idx = 0;
@@ -631,6 +631,48 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double delta) {
     free(rTextFile.fname);
     return res;
 }
+/*
+voif crgViewer(int dataSetId, osg::ref_ptr<osg::Node> SceneRoot) {
+            // Creating the viewer
+            osgViewer::Viewer viewer ;
+            viewer.setSceneData( SceneRoot );
+            
+            // Setup camera
+            osg::Matrix matrix;
+            osg::Camera *viewCam = viewer.getCamera();
+            int cpId = -1;
+            if ( speed<0. ) {
+                matrix.makeLookAt( osg::Vec3(0.,-30.,5.), osg::Vec3(0.,0.,0.), osg::Vec3(0.,0.,1.) );
+                //viewer.getCamera()->setViewMatrix(matrix);
+                viewCam->setViewMatrix(matrix);
+                viewer.setCameraManipulator(  new osgGA::TrackballManipulator() );
+            }
+            else {
+                // create a contact point 
+                cpId = crgContactPointCreate( dataSetId );
+                if ( cpId < 0 ) 
+                    crgMsgPrint( dCrgMsgLevelFatal, "main: could not create contact point.\n" );
+            }
+            // get extents of data set.
+            double uMin, uMax;
+            crgDataSetGetURange( dataSetId, &uMin, &uMax );
+            double uCam = uMin - speed;  // Start before the beginning
+            while( !viewer.done() ) {
+                if ( cpId>=0 ) {
+                    double x, y, z;
+                    getXYZ(cpId, uCam, 0., &x, &y, &z);
+                    double xC, yC, zC;
+                    getXYZ(cpId, uCam+5., 0., &xC, &yC, &zC);
+                    matrix.makeLookAt( osg::Vec3(x,y,z+1.3), osg::Vec3(xC,yC,zC), osg::Vec3(0.,0.,1.) );
+                    viewer.getCamera()->setViewMatrix(matrix);
+                    uCam += 0.1*speed;
+                    if ( uCam>uMax ) uCam = uMin-speed;
+                }
+                viewer.frame();
+            }
+    
+}
+*/
 
 int main( int argc, char** argv ) 
 {
@@ -651,66 +693,66 @@ int main( int argc, char** argv )
         argc--;
         
         if ( *argv[0] != '-' ) continue;
-        
-        if ( !strcmp( *argv, "-h" ) ) {
-            usage();
-            return 1;
-        }
-        if ( ! strcmp( *argv, "-d" ) ) {
-            argv++;
-            argc--;
-            if ( argc ) {
-                delta = atof(*argv);
+       
+        switch( (*argv)[1] ) {
+            case 'h':
+                usage();
+                return 1;
+            case 'd':
+                argv++;
+                argc--;
+                if ( argc ) {
+                    delta = atof(*argv);
+                    continue;
+                }
+                fprintf(stderr,"Missing delta value\n");
+                return 1;
+            case 'l':
+                useLOD = 1;
                 continue;
-            }
-            fprintf(stderr,"Missing debug level\n");
-            return 1;
-        }
-        if ( ! strcmp( *argv, "-l" ) ) {
-            useLOD = 1;
-            continue;
-        }
-        if ( ! strcmp( *argv, "-p" ) ) {
-            usePagedLOD = 1;
-            continue;
-        }
-        if ( ! strcmp( *argv, "-m" ) ) {
-            useHeightMap= 1;
-            continue;
-        }
-        if ( ! strcmp( *argv, "-o" ) ) {
-            argv++;
-            argc--;
-            if ( argc ) {
-                outfilename = *argv;
+            case 'p':
+                usePagedLOD = 1;
                 continue;
-            }
-            fprintf(stderr,"Missing output filename\n");
-            return 1;
-        }
-        if ( ! strcmp( *argv, "-f" ) ) {
-            argv++;
-            argc--;
-            if ( argc ) {
-                speed = atof(*argv);
+            case 'm':
+                useHeightMap= 1;
                 continue;
-            }
-            fprintf(stderr,"Missing velocity\n");
-            return 1;
+            case 'o':
+                argv++;
+                argc--;
+                if ( argc ) {
+                    outfilename = *argv;
+                    continue;
+                }
+                fprintf(stderr,"Missing output filename\n");
+                return 1;
+            case 'f':
+                argv++;
+                argc--;
+                if ( argc ) {
+                    speed = atof(*argv);
+                    continue;
+                }
+                fprintf(stderr,"Missing velocity\n");
+                return 1;
+            default:
+                fprintf(stderr,"Bad option '%s'\n", *argv);
+                usage();
+                return 1;
         }
-        fprintf(stderr,"Bad option: '%s'\n", *argv);
-        return 1;
-    }
+    } // while
     
-    if ( !argc )    /* last argument is the filename */
-    {
-        crgMsgPrint( dCrgMsgLevelInfo, "searching file\n" );
-        
+    /* Last arguments are names of input files.
+     * Current implementation limited to one inputfile.
+     */
+    if ( !argc )  {  
+        // crgMsgPrint( dCrgMsgLevelInfo, "Looking for inout file\n" );
         if ( argc < 0 ) {
             crgMsgPrint( dCrgMsgLevelFatal, "Name of input file is missing.\n" );
             usage();
         }
         filename = *argv;
+        argv++;
+        argc--;
     }
     
     /* --- now load the file --- */
