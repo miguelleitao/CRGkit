@@ -94,6 +94,7 @@ ptsData *loadPtsFile(char *fname, int nCols) {
             }
             pts->verts += 1;
         }
+        fclose(fin);
     }
     return pts;
 }
@@ -247,7 +248,7 @@ int main( int argc, char** argv )
     savePtsCrgFile(pts, outfilename);
      
     freePts(pts);
-    printf( "main: normal termination\n" );
+    printf( "main: done.\n" );
     
     return 1;
 }
