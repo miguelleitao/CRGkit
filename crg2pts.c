@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "linmath/linmath.h"
 #include "crgBaseLib.h"
 
 void usage()
@@ -44,6 +45,8 @@ int main( int argc, char** argv )
     int    j;
     int    nStepsV = 20;
     int    cpId;
+    int    formatPTSQ = 0;
+    int    formatPath = 0;
     double du, dv;
     double uMin, uMax;
     double vMin, vMax;
@@ -66,6 +69,14 @@ int main( int argc, char** argv )
         
         if ( !strcmp( *argv, "-h" ) ) {
             usage();
+            continue;
+        }
+        if ( !strcmp( *argv, "-q" ) ) {
+            formatPTSQ = 1;
+            continue;
+        }
+        if ( !strcmp( *argv, "-p" ) ) {
+            formatPath = 1;
             continue;
         }
         if ( ! strcmp( *argv, "-v" ) ) {
@@ -156,9 +167,21 @@ int main( int argc, char** argv )
             if ( i>0 ) 
                 phi = atan2( y-lastY, x-lastX );
             
-            printf("%+10.4f %+10.4f %+10.4f %+10.4f %+10.4f %+10.4f\n",
-                    x, y, z,        phi, 0., 0.);
+            if ( formatPath ) {
+                printf("%+10.4f ", du*i);
+            }
+            // Point position: X, Y, Z  
+            printf("%+10.4f %+10.4f %+10.4f ", x, y, z+2.);
             
+            if ( formatPTSQ ) {
+                quat q;
+                quat_make_from_euler(q, phi, 0., 0.);
+                printf("%+10.4f %+10.4f %+10.4f %+10.4f\n",
+                    q[0], q[1], q[2], q[3]);
+            }
+            else
+                printf(" %+10.4f %+10.4f %+10.4f\n", phi, 0., 0.);
+             
             lastX = x;
             lastY = y;        
     }
