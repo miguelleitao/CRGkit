@@ -31,8 +31,12 @@
 void usage()
 {
     crgMsgPrint( dCrgMsgLevelNotice, "usage: cgr2pts [options] <filename>\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "       options: -v offset     apply transverse offset\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            Show this info\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "       options: -q            Produce PTSQ file using position and quaternion per vertex.\n");
+    crgMsgPrint( dCrgMsgLevelNotice, "                              Format: [x,y,z,q1,q2,q3,q4]\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "       options: -p            Produce Path file using U offset as indexing value in first column.\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "                              U offset can be used as time when speed=1.\n");
+    crgMsgPrint( dCrgMsgLevelNotice, "       options: -v offset     Apply transverse offset\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       <filename>  input file\n" );
     exit( -1 );
 }

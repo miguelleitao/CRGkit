@@ -37,7 +37,7 @@ OpenCRG: OpenCRG/baselib/lib
 OpenCRG/baselib/lib: OpenCRG/makefile
 	make -C OpenCRG/baselib
 
-crg2pts.o: crg2pts.c 
+crg2pts.o: crg2pts.c linmath/linmath.h
 	gcc -c -Wall crg2pts.c -I OpenCRG/baselib/inc
 
 crg2pts: crg2pts.o OpenCRG/baselib/lib/libOpenCRG.a
@@ -57,6 +57,9 @@ crg2osg: crg2osg.o
 
 OpenCRG/lib/libOpenCRG.a:
 	make -C OpenCRG
+	
+linmath/linmath.h:
+	git submodule update --recursive --remote
 
 .PHONY:clean
 clean:
