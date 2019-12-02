@@ -1,3 +1,6 @@
 [submodule "OpenCRG"]
 	path = OpenCRG
 	url = https://gitlab.com/dris_porto/OpenCRG.git
+[submodule "linmath"]
+	path = linmath
+	url = git@github.com:miguelleitao/linmath.git
