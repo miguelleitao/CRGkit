@@ -29,6 +29,7 @@ CFLAGS=-Wall -O2
 
 all: OpenCRG ${PROGS}
 
+.PRECIOUS: OpenCRG/makefile
 OpenCRG/makefile:
 	git submodule update --init --recursive
 
@@ -59,7 +60,7 @@ OpenCRG/lib/libOpenCRG.a:
 	make -C OpenCRG
 	
 linmath/linmath.h:
-	git submodule update --recursive --remote
+	git submodule update --init --recursive --remote
 
 .PHONY:clean
 clean:
