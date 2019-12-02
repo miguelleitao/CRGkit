@@ -37,7 +37,7 @@ void usage()
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -p            Produce Path file using U offset as indexing value in first column.\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "                              U offset can be used as time when speed=1.\n");
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -v offset     Apply transverse offset\n" );
-    crgMsgPrint( dCrgMsgLevelNotice, "       <filename>  input file\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "       <filename>             Identify input file\n" );
     exit( -1 );
 }
 
