@@ -51,6 +51,7 @@
 #include <osg/MatrixTransform>
 #include <osgGA/TrackballManipulator>    
 #include <osg/ShapeDrawable>
+#include <osg/PolygonOffset>
 
 
 #include "crgBaseLib.h"
@@ -69,6 +70,10 @@ int   useLOD = 0;
 int   usePagedLOD = 0;
 int   useHeightMap = 0;
 double speed = -1.0;
+
+typedef struct {
+    unsigned char r, g, b;
+} Color;
     
 typedef struct {
     char    *fname;
@@ -81,6 +86,46 @@ typedef struct {
     osg::ref_ptr<osg::Texture2D> tex2D;
 } Texture;
     
+class RoadElement {
+    public:
+        int type;
+        double uMin;
+        double uMax;
+        double vMin;
+        double vMax;
+        double lOn;
+        double lOff;
+        double pOffset;
+        Texture *texture;
+        Color color;
+        RoadElement(int t) {
+            type = t;
+            uMin = -1e8;
+            uMax =  1e8;
+            vMin = -1e8;
+            vMax =  1e8;
+            if ( t==2 ) {
+                lOn = 8.;
+                lOff = 4.;
+            }
+            else {
+                lOn = 1.;
+                lOff = 0.;
+            }
+            if ( t==-1 ) {
+                pOffset = 0.;
+                texture = NULL;
+            }
+            else {
+                pOffset = -1000.;
+                texture = NULL;
+            }
+            color = {0, 0, 0};            
+        }
+};
+
+
+
 void usage()
 {
     crgMsgPrint( dCrgMsgLevelNotice, "usage: crg2osg [options] <filename>\n" );
@@ -445,8 +490,59 @@ osg::ref_ptr<osg::Geode> crg2osgGeode(int dataSetId,
             osg::ref_ptr<osg::StateSet> rState( rGeode->getOrCreateStateSet() );
             rState->setTextureAttributeAndModes(0, tFile->tex2D, osg::StateAttribute::ON); 
     }
+    
     if ( cpId>=0 ) crgContactPointDelete( cpId );
     return rGeode;
+}
+
+/*! Create a osg::Group for a road trasition section.
+ */
+osg::ref_ptr<osg::Group>  crg2osgTriRoadSection(int dataSetId, 
+            double uMin, double uMax, double vMin, double vMax, 
+            double deltaU, double deltaV, Texture *rTextFile) {
+    osg::ref_ptr<osg::Group> section = new osg::Group;
+    //printf("calling crg2osgGeode() from crg2osgRoadSection()\n");
+    section->addChild(crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, rTextFile));
+    
+    //printf("returned crg2osgGeode() from crg2osgRoadSection()\n");
+    
+    osg::ref_ptr<osg::Geode> lines = crg2osgGeode(dataSetId, uMin, uMax, vMax-0.5, vMax-0.4, deltaU, deltaV, NULL);
+    osg::ref_ptr<osg::StateSet> ss = lines->getOrCreateStateSet();
+    if (ss) { 
+        osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+        polyoffset->setFactor(-1000.0f);
+        polyoffset->setUnits(-1.0f);
+        ss->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+    }
+    else 
+        fprintf(stderr,"Could not get StateSet\n");
+    section->addChild(lines);
+    return section;
+}
+
+/*! Create a osg::Geode for a road section.
+ */
+osg::ref_ptr<osg::Group>  crg2osgRoadSection(int dataSetId, 
+            double uMin, double uMax, double vMin, double vMax, 
+            double deltaU, double deltaV, Texture *rTextFile) {
+    osg::ref_ptr<osg::Group> section = new osg::Group;
+    //printf("calling crg2osgGeode() from crg2osgRoadSection()\n");
+    section->addChild(crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, rTextFile));
+    
+    //printf("returned crg2osgGeode() from crg2osgRoadSection()\n");
+    
+    osg::ref_ptr<osg::Geode> lines = crg2osgGeode(dataSetId, uMin, uMax, vMax-0.5, vMax-0.4, deltaU, deltaV, NULL);
+    osg::ref_ptr<osg::StateSet> ss = lines->getOrCreateStateSet();
+    if (ss) { 
+        osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+        polyoffset->setFactor(-1000.0f);
+        polyoffset->setUnits(-1.0f);
+        ss->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+    }
+    else 
+        fprintf(stderr,"Could not get StateSet\n");
+    section->addChild(lines);
+    return section;
 }
 
 osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId, 
@@ -460,48 +556,23 @@ osg::ref_ptr<osg::Node>   crg2osgLastLOD(int dataSetId,
     
     // Main LOD node for present level.
     osg::ref_ptr<osg::LOD> rLLOD = new osg::LOD;
-    osg::ref_ptr<osg::Geode> geo;
+    osg::ref_ptr<osg::Group> section;
+    //osg::ref_ptr<osg::Geode> geo;
 
     // Single Poligon
-    geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
-    rLLOD->addChild(geo, lodDist+uMax-uMin, FLT_MAX);
+    section = crg2osgRoadSection(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
+    rLLOD->addChild(section, lodDist+uMax-uMin, FLT_MAX);
     double level = 1.;
     while(level<9. && lodDist/level>=1.) {
-        geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/level, (vMax-vMin)/level, tFile);
-        rLLOD->addChild(geo, lodDist/level, lodDist/level+uMax-uMin);
+        section = crg2osgTriRoadSection(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/level, (vMax-vMin)/level, tFile);
+        rLLOD->addChild(section, lodDist/level, lodDist/level+uMax-uMin);
     
-        geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2./level, (vMax-vMin)/2./level, tFile);
-        rLLOD->addChild(geo, lodDist/2./level+uMax-uMin, lodDist/level); 
-       /*
-        geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2., (vMax-vMin)/2., tFile);
-        rLLOD->addChild(geo, lodDist/2., lodDist/2.+uMax-uMin);
-    
-        // Full Detail
-        geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/4., (vMax-vMin)/4., tFile);
-        rLLOD->addChild(geo, 0., lodDist/2.);
-        */
+        section = crg2osgRoadSection(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2./level, (vMax-vMin)/2./level, tFile);
+        rLLOD->addChild(section, lodDist/2./level+uMax-uMin, lodDist/level); 
         level *= 2.;
     }
     int nC = rLLOD->getNumChildren();
     rLLOD->setRange(nC-1, 0., lodDist*2./level);
-    /*
-    // Full Detail
-    geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/4., (vMax-vMin)/4., tFile);
-    rLLOD->addChild(geo, 0., lodDist/2.);
-        
-    geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2., (vMax-vMin)/2., tFile);
-    rLLOD->addChild(geo, lodDist/2., lodDist/2.+uMax-uMin);
-
-    geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, (uMax-uMin)/2., (vMax-vMin)/2., tFile);
-    rLLOD->addChild(geo, lodDist/2.+uMax-uMin, lodDist);
-    
-    geo = crg2osgTriGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
-    rLLOD->addChild(geo, lodDist, lodDist+uMax-uMin);
-    
-    // Single Poligon
-    geo = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
-    rLLOD->addChild(geo, lodDist+uMax-uMin, FLT_MAX);
-    */
     
     return rLLOD;
 }
@@ -572,7 +643,6 @@ osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId,
             double du, double dv,
             std::string tFile )
 {       
-    
     unsigned int nStepsU = ( uMax-uMin ) / du;
     unsigned int nStepsV = ( vMax-vMin ) / dv;
 
@@ -663,7 +733,7 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV)
     else if ( useHeightMap ) {
         res = crg2osgHeightMap(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, rTextFile.fname);
     }
-    else res = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, &rTextFile);
+    else res = crg2osgRoadSection(dataSetId, uMin, uMax, vMin, vMax, deltaU, deltaV, &rTextFile);
         
     //osg::ref_ptr<osg::Geode> res = crg2osgGeode(dataSetId,  uMin,  uMax,  vMin,  vMax,  deltaU,  deltaV, &rTextFile);
     //osg::ref_ptr<osg::Node> res = crg2osgLOD(dataSetId,  uMin,  uMax,  vMin,  vMax,  deltaU*2,  deltaV, &rTextFile);
@@ -672,7 +742,6 @@ osg::ref_ptr<osg::Node> crg2osg_all(int dataSetId, double deltaU, double deltaV)
 }
 
 void crgViewer(int dataSetId, osg::ref_ptr<osg::Node> rGeode) {
-    
         // Creating the scene root node.
         osg::ref_ptr<osg::Group> SceneRoot = new osg::Group;
         SceneRoot->addChild( rGeode );
@@ -730,6 +799,24 @@ int main( int argc, char** argv )
     if ( argc < 2 )
         usage();
     
+    RoadElement *road;
+    road = (RoadElement *)malloc(7*sizeof(RoadElement *));
+    
+    road[0] = RoadElement( -1);
+    
+    typedef struct {
+        int type;
+        double uMin;
+        double uMax;
+        double vMin;
+        double vMax;
+        double lOn;
+        double lOff;
+        double pOffset;
+        Texture texture;
+        Color color;
+    } RoadElement;
+
     argc--;
     while( argc )
     {
