@@ -312,7 +312,7 @@ osg::ref_ptr<osg::Geode> crg2osgTriGeode(int dataSetId,
         rTri->addPrimitiveSet( new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, idx-5, 5 ));
         v1 = v2;
         v2 += dv;
-    } while( v2<=vMax );
+    } while( v2<=vMax + 1e-8 );
 
     rTri->setVertexArray(rVerts);
     rTri->setTexCoordArray(0, rTexCoords);
