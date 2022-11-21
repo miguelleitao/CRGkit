@@ -29,7 +29,7 @@
 
 void usage()
 {
-    crgMsgPrint( dCrgMsgLevelNotice, "usage: cgr2pts [options] <filename>\n" );
+    crgMsgPrint( dCrgMsgLevelNotice, "usage: cgr2obj [options] <filename>\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -h            show this info\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       options: -v offset     apply transverse offset\n" );
     crgMsgPrint( dCrgMsgLevelNotice, "       <filename>  input file\n" );

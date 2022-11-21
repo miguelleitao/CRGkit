@@ -632,9 +632,46 @@ osg::ref_ptr<osg::Node>   crg2osgLOD(int dataSetId,
     return rLOD;
 }
 
+/*  Create a Paged level-of-detail representation of a road section.
+ *  Return a reference to a osg::PagedLOD object.
+ */
+osg::ref_ptr<osg::Node>   crg2osgPLOD(int dataSetId, 
+            double uMin, double uMax,
+            double vMin, double vMax,
+            double du, double dv,
+            Texture *tFile = NULL)
+{       
+    double maxSectionLen = 1000.;
+    int nSections = (uMax-uMin+1e-8) / maxSectionLen + 1;
+    double SectionLen = (uMax-uMin) / (double)nSections;
+    
+    for( int i=0 ; i<nSections ; i++ ) {
+        double uStart = uMin +    i  * SectionLen;
+        double uEnd   = uMin + (i+1) * SectionLen;
+        osg::ref_ptr<osg::Node> detailed = crg2osgLOD(dataSetId, uStart, uEnd, vMin, vMax, du, dv, tFile);
+    }
+
+    // Main LOD node for present level.
+    osg::ref_ptr<osg::LOD> rLOD = new osg::LOD;
+ //   rLOD->addChild(multiple, 0.0f, lodDist );
+    
+    // Single poligon
+    osg::ref_ptr<osg::Geode> single = crg2osgGeode(dataSetId, uMin, uMax, vMin, vMax, uMax-uMin, vMax-vMin, tFile);
+    //rLOD->addChild(single, lodDist, FLT_MAX);
+    /*
+        printf("multiple lib name: %s, class name: %s\n", 
+               multiple->libraryName(), multiple->className());
+               */
+    
+    
+  //  rLOD->addChild(single, lodDist, FLT_MAX);
+    
+    return rLOD;
+}
+
 /*! Creates a osg::HeightField for a road section.
  *  Experimental implementation.
- *  Since HeightFields are buiklt into regular grids, this implementation discards reference line information.
+ *  Since HeightFields are built into regular grids, this implementation discards reference line information.
  *  Result is always a strait line road.
  */
 osg::ref_ptr<osg::Node>   crg2osgHeightMap(int dataSetId, 
